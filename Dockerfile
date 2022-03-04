@@ -1,39 +1,29 @@
-# build the binary
-ARG GO_VERSION
-ARG UPSTREAM_REPO
-ARG UPSTREAM_TAG
-FROM golang:${GO_VERSION:-1.17.5} AS builder
-# copy insights handler
+# Build the manager binary
+FROM golang:1.17-alpine3.15 as builder
+
 COPY . /go/src/github.com/uselagoon/lagoon/services/insights-handler/
 WORKDIR /go/src/github.com/uselagoon/lagoon/services/insights-handler/
 
-#RUN GO111MODULE=on go test ./...
-# compile
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o insights-handler .
+# cache deps before building and copying source so that we don't need to re-download as much
+# and so that source changes don't invalidate our downloaded layer
+RUN go mod download
 
-# put the binary into container
-# use the commons image to get entrypoints
-FROM ${UPSTREAM_REPO:-uselagoon}/commons:${UPSTREAM_TAG:-latest}
+# Copy the go source
+COPY main.go main.go
 
-ARG LAGOON_VERSION
-ENV LAGOON_VERSION=$LAGOON_VERSION
+# Build
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o insights-handler main.go
 
-WORKDIR /app/
+# Use distroless as minimal base image to package the insights-handler binary
+# Refer to https://github.com/GoogleContainerTools/distroless for more details
+#FROM gcr.io/distroless/static:nonroot
 
-# bring the insights-handler binary from the builder
+FROM alpine:3.15
+
+WORKDIR /
 COPY --from=builder /go/src/github.com/uselagoon/lagoon/services/insights-handler/insights-handler .
 
-COPY key_facts.txt /app/key_facts.txt
+COPY key_facts.txt /key_facts.txt
+USER 65532:65532
 
-ENV LAGOON=insights-handler
-# set defaults
-ENV JWT_SECRET=super-secret-string \
-    JWT_AUDIENCE=api.dev \
-    GRAPHQL_ENDPOINT="http://api:3000/graphql" \
-    RABBITMQ_ADDRESS=broker \
-    RABBITMQ_PORT=5672 \
-    RABBITMQ_USERNAME=guest \
-    RABBITMQ_PASSWORD=guest
-
-ENTRYPOINT ["/sbin/tini", "--", "/lagoon/entrypoints.sh"]
-CMD ["/app/insights-handler"]
+ENTRYPOINT ["/insights-handler"]
