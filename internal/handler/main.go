@@ -445,6 +445,12 @@ func (h *Messaging) processSbomInsightsData(insights InsightsData, v string, api
 
 	// Process SBOM into facts
 	facts := processFactsFromSBOM(bom.Components, environment.Id, source)
+
+	facts, err = keyFactsFilter(facts)
+	if err != nil {
+		return err
+	}
+
 	if len(facts) == 0 {
 		return fmt.Errorf("no facts to process")
 	}
@@ -491,6 +497,11 @@ func (h *Messaging) processImageInspectInsightsData(insights InsightsData, v str
 		}
 		log.Printf("Successfully decoded image-inspect")
 
+		facts, err = keyFactsFilter(facts)
+		if err != nil {
+			return err
+		}
+
 		if len(facts) == 0 {
 			return fmt.Errorf("no facts to process")
 		}
@@ -507,6 +518,36 @@ func (h *Messaging) processImageInspectInsightsData(insights InsightsData, v str
 	}
 
 	return nil
+}
+
+func keyFactsFilter(factsInput []lagoonclient.AddFactInput) ([]lagoonclient.AddFactInput, error) {
+
+	filteredFacts := make(map[string]lagoonclient.AddFactInput)
+
+	factRegexes, err := scanKeyFactsFile("./key_facts.txt")
+	if err != nil {
+		fmt.Errorf("scan file error: %v", err)
+	}
+
+	for _, v := range factsInput {
+		for _, k := range factRegexes {
+			hasMatch, err := regexp.Match(k, []byte(v.Name))
+			if err != nil {
+				fmt.Errorf(err.Error())
+			}
+			if hasMatch {
+				if _, ok := filteredFacts[v.Name]; !ok {
+					filteredFacts[v.Name] = v
+				}
+			}
+		}
+	}
+	v := make([]lagoonclient.AddFactInput, 0, len(filteredFacts))
+
+	for  _, value := range filteredFacts {
+		v = append(v, value)
+	}
+	return v, nil
 }
 
 func (h *Messaging) deleteExistingFactsBySource(apiClient graphql.Client, environment lagoonclient.Environment, source string, project lagoonclient.Project) error {
@@ -687,28 +728,14 @@ func processFactsFromSBOM(facts *[]cdx.Component, environmentId int, source stri
 		return factsInput
 	}
 
-	keyFacts, err := scanKeyFactsFile("./key_facts.txt")
-	if err != nil {
-		fmt.Errorf("scan file error: %v", err)
-	}
-
 	var filteredFacts []cdx.Component
 	keyFactsExistMap := make(map[string]bool)
 
 	// Filter key facts
 	for _, v := range *facts {
-		for _, k := range keyFacts {
-			hasMatch, err := regexp.Match(k, []byte(v.Name))
-			if err != nil {
-				fmt.Errorf(err.Error())
-			}
-			if hasMatch {
-				// Remove duplicate key facts
-				if _, ok := keyFactsExistMap[v.Name]; !ok {
-					keyFactsExistMap[v.Name] = true
-					filteredFacts = append(filteredFacts, v)
-				}
-			}
+		if _, ok := keyFactsExistMap[v.Name]; !ok {
+			keyFactsExistMap[v.Name] = true
+			filteredFacts = append(filteredFacts, v)
 		}
 	}
 
@@ -729,11 +756,6 @@ func processFactsFromSBOM(facts *[]cdx.Component, environmentId int, source stri
 func processFactsFromImageInspect(imageInspectData ImageInspectData, id int, source string) ([]lagoonclient.AddFactInput, error) {
 	var factsInput []lagoonclient.AddFactInput
 
-	keyFacts, err := scanKeyFactsFile("./key_facts.txt")
-	if err != nil {
-		fmt.Errorf("scan file error: %v", err)
-	}
-
 	var filteredFacts []EnvironmentVariable
 	keyFactsExistMap := make(map[string]bool)
 
@@ -746,18 +768,10 @@ func processFactsFromImageInspect(imageInspectData ImageInspectData, id int, sou
 				Value: envSplitStr[1],
 			}
 
-			for _, k := range keyFacts {
-				hasMatch, err := regexp.Match(k, []byte(env.Key))
-				if err != nil {
-					fmt.Errorf(err.Error())
-				}
-				// Remove duplicate key facts
-				if hasMatch {
-					if _, ok := keyFactsExistMap[env.Key]; !ok {
-						keyFactsExistMap[env.Key] = true
-						filteredFacts = append(filteredFacts, env)
-					}
-				}
+			// Remove duplicate key facts
+			if _, ok := keyFactsExistMap[env.Key]; !ok {
+				keyFactsExistMap[env.Key] = true
+				filteredFacts = append(filteredFacts, env)
 			}
 		}
 	}
