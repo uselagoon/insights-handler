@@ -85,7 +85,7 @@ type InsightType int64
 const (
 	Raw = iota
 	Sbom
-	ImageInspect
+	Image
 )
 
 func (i InsightType) String() string {
@@ -94,8 +94,8 @@ func (i InsightType) String() string {
 		return "RAW"
 	case Sbom:
 		return "SBOM"
-	case ImageInspect:
-		return "IMAGE-INSPECT"
+	case Image:
+		return "IMAGE"
 	}
 	return "RAW"
 }
@@ -104,7 +104,7 @@ type LagoonType int64
 
 const (
 	Facts = iota
-	ImageInspectFacts
+	ImageFacts
 	Problems
 )
 
@@ -112,8 +112,8 @@ func (t LagoonType) String() string {
 	switch t {
 	case Facts:
 		return "FACTS"
-	case ImageInspectFacts:
-		return "IMAGE-INSPECT"
+	case ImageFacts:
+		return "IMAGE"
 	case Problems:
 		return "PROBLEMS"
 	}
@@ -137,7 +137,7 @@ func (p PayloadType) String() string {
 	return "PAYLOAD"
 }
 
-type ImageInspectData struct {
+type ImageData struct {
 	Name          string            `json:"name"`
 	Digest        string            `json:"digest"`
 	RepoTags      []string          `json:"repoTags"`
@@ -283,8 +283,8 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 				if label == "lagoon.sh/insightsType" {
 					insights.InputType = incoming.Labels["lagoon.sh/insightsType"]
 				}
-				if incoming.Labels["lagoon.sh/insightsType"] == "image-gz" || incoming.Labels["lagoon.sh/insightsType"] == "image-inspect-gz" {
-					insights.LagoonType = ImageInspectFacts
+				if incoming.Labels["lagoon.sh/insightsType"] == "image-gz" {
+					insights.LagoonType = ImageFacts
 				}
 				if label == "lagoon.sh/insightsOutputCompressed" {
 					compressed, _ := strconv.ParseBool(incoming.Labels["lagoon.sh/insightsOutputCompressed"])
@@ -304,8 +304,8 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 			switch insights.InputType {
 			case "sbom", "sbom-gz":
 				insights.InsightsType = Sbom
-			case "image-gz", "image-inspect", "image-inspect-gz":
-				insights.InsightsType = ImageInspect
+			case "image", "image-gz":
+				insights.InsightsType = Image
 			default:
 				insights.InsightsType = Raw
 			}
@@ -319,13 +319,18 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 				fmt.Errorf("%s", err.Error())
 			}
 			return
-		} else {
-			if len(incoming.Payload) != 0 {
-				insights.InputPayload = Payload
-			}
-			if len(incoming.BinaryPayload) != 0 {
-				insights.InputPayload = BinaryPayload
-			}
+		}
+		if len(incoming.Payload) != 0 {
+			insights.InputPayload = Payload
+		}
+		if len(incoming.BinaryPayload) != 0 {
+			insights.InputPayload = BinaryPayload
+		}
+
+		// Debug
+		if h.EnableDebug {
+			log.Println("[DEBUG] insights:", insights)
+			log.Println("[DEBUG] target:", resource)
 		}
 
 		// Process s3 upload
@@ -338,25 +343,22 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 
 		// Process Lagoon API integration
 		if !h.LagoonAPI.Disabled {
-			log.Println(insights)
-			log.Println(insights.InsightsType)
-			log.Println(insights.InputType)
 
-			if insights.InsightsType != Sbom && insights.InsightsType != ImageInspect {
-				log.Println("only 'sbom' and 'image-inspect' types are currently supported for api processing")
+			if insights.InsightsType != Sbom && insights.InsightsType != Image {
+				log.Println("only 'sbom' and 'image' types are currently supported for api processing")
 			} else {
 				err := h.sendToLagoonAPI(incoming, resource, insights)
 				if err != nil {
 					log.Printf("Unable to send to the api: %s", err.Error())
 				}
 			}
-
 		}
 
+		// Ack to remove from queue
 		err := message.Ack(false)
 		if err != nil {
 			fmt.Errorf("%s", err.Error())
-		} // ack to remove from queue
+		}
 	}
 }
 
@@ -388,10 +390,10 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 				}
 			}
 
-			if insights.InsightsType == ImageInspect {
-				err = h.processImageInspectInsightsData(insights, v, apiClient, resource)
+			if insights.InsightsType == Image {
+				err = h.processImageInsightsData(insights, v, apiClient, resource)
 				if err != nil {
-					log.Println("warning: unable to process inspect image data: ", fmt.Errorf(err.Error()))
+					log.Println("warning: unable to process image data: ", fmt.Errorf(err.Error()))
 				}
 			}
 		}
@@ -471,50 +473,43 @@ func (h *Messaging) processSbomInsightsData(insights InsightsData, v string, api
 	return nil
 }
 
-func (h *Messaging) processImageInspectInsightsData(insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) error {
-	if insights.OutputCompressed {
-		decoded, err := decodeGzipString(v)
-		if err != nil {
-			fmt.Errorf(err.Error())
-		}
+func (h *Messaging) processImageInsightsData(insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) error {
+	decoded, err := decodeGzipString(v)
+	if err != nil {
+		fmt.Errorf(err.Error())
+	}
 
-		project, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
-		if apiErr != nil {
-			return apiErr
-		}
-		source := fmt.Sprintf("image-inspect:%s", resource.Service)
+	project, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
+	if apiErr != nil {
+		return apiErr
+	}
+	source := fmt.Sprintf("image:%s", resource.Service)
 
-		marshallDecoded, err := json.Marshal(decoded)
-		var imageInspect ImageInspectData
-		err = json.Unmarshal(marshallDecoded, &imageInspect)
-		if err != nil {
-			return err
-		}
+	marshallDecoded, err := json.Marshal(decoded)
+	var image ImageData
+	err = json.Unmarshal(marshallDecoded, &image)
+	if err != nil {
+		return err
+	}
 
-		facts, err := processFactsFromImageInspect(imageInspect, environment.Id, source)
-		if err != nil {
-			return err
-		}
-		log.Printf("Successfully decoded image-inspect")
+	facts, err := processFactsFromImage(image, environment.Id, source)
+	if err != nil {
+		return err
+	}
+	log.Printf("Successfully decoded image")
 
-		facts, err = keyFactsFilter(facts)
-		if err != nil {
-			return err
-		}
+	if len(facts) == 0 {
+		return fmt.Errorf("no facts to process")
+	}
 
-		if len(facts) == 0 {
-			return fmt.Errorf("no facts to process")
-		}
+	apiErr = h.deleteExistingFactsBySource(apiClient, environment, source, project)
+	if apiErr != nil {
+		return apiErr
+	}
 
-		apiErr = h.deleteExistingFactsBySource(apiClient, environment, source, project)
-		if apiErr != nil {
-			return apiErr
-		}
-
-		apiErr = h.pushFactsToLagoonApi(facts, resource)
-		if apiErr != nil {
-			return apiErr
-		}
+	apiErr = h.pushFactsToLagoonApi(facts, resource)
+	if apiErr != nil {
+		return apiErr
 	}
 
 	return nil
@@ -613,7 +608,7 @@ func (h *Messaging) sendToLagoonS3(incoming *InsightsMessage, insights InsightsD
 		log.Printf("Successfully created %s\n", h.S3Config.Bucket)
 	}
 
-	if incoming.Payload != nil {
+	if len(incoming.Payload) != 0 {
 		b, err := json.Marshal(incoming)
 		if err != nil {
 			return err
@@ -629,10 +624,12 @@ func (h *Messaging) sendToLagoonS3(incoming *InsightsMessage, insights InsightsD
 			return putObjErr
 		}
 
+		log.Println("--------------------")
 		log.Printf("Successfully uploaded %s of size %d\n", objectName, info.Size)
+		log.Println("--------------------")
 	}
 
-	if incoming.BinaryPayload != nil {
+	if len(incoming.BinaryPayload) != 0 {
 		for _, p := range incoming.BinaryPayload {
 			result, err := decodeGzipString(p)
 			if err != nil {
@@ -691,12 +688,18 @@ func (h *Messaging) pushFactsToLagoonApi(facts []lagoonclient.AddFactInput, reso
 	apiClient := graphql.NewClient(h.LagoonAPI.Endpoint, &http.Client{Transport: &authedTransport{wrapped: http.DefaultTransport, h: h}})
 
 	log.Println("--------------------")
-	log.Printf("Attempting to add %d facts...", len(facts))
+	log.Printf("Attempting to add %d fact/s...", len(facts))
 	log.Println("--------------------")
 
 	result, err := lagoonclient.AddFacts(context.TODO(), apiClient, facts)
 	if err != nil {
 		return err
+	}
+
+	if h.EnableDebug {
+		for _, fact := range facts {
+			log.Println("[DEBUG]...", fact.Name, ":", fact.Value)
+		}
 	}
 
 	log.Println(result)
@@ -753,15 +756,15 @@ func processFactsFromSBOM(facts *[]cdx.Component, environmentId int, source stri
 	return factsInput
 }
 
-func processFactsFromImageInspect(imageInspectData ImageInspectData, id int, source string) ([]lagoonclient.AddFactInput, error) {
+func processFactsFromImage(imageData ImageData, id int, source string) ([]lagoonclient.AddFactInput, error) {
 	var factsInput []lagoonclient.AddFactInput
 
 	var filteredFacts []EnvironmentVariable
 	keyFactsExistMap := make(map[string]bool)
 
-	// Check if image inspect contains useful environment variables
-	if imageInspectData.Env != nil {
-		for _, v := range imageInspectData.Env {
+	// Check if image contains useful environment variables
+	if imageData.Env != nil {
+		for _, v := range imageData.Env {
 			var envSplitStr = strings.Split(v, "=")
 			env := EnvironmentVariable{
 				Key:   envSplitStr[0],

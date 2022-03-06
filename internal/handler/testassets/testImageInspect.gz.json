@@ -8,7 +8,7 @@
     "lagoon.sh/project": "high-cotton",
     "lagoon.sh/environment": "Master",
     "lagoon.sh/service": "cli",
-    "lagoon.sh/insightsType": "image-inspect-gz",
+    "lagoon.sh/insightsType": "image-gz",
     "lagoon.sh/insightsOutputCompressed": "true"
   }
 }

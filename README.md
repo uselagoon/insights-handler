@@ -21,5 +21,16 @@ To compile GraphQL schema, type-safe structs and response data with genqlient we
 
     go generate
 
-    
-    
+## Configmap labels
+
+```json
+  "labels": {
+    "lagoon.sh/project": "lagoon",
+    "lagoon.sh/environment": "main",
+    "lagoon.sh/service": "cli",
+    "lagoon.sh/insightsType": ["sbom", "image"],
+    "lagoon.sh/insightsOutputCompressed": ["true", "false" (default)] (optional),
+    "lagoon.sh/insightsOutputFileExt": ["json (default)", "txt", "csv", "html", "jpg"] (optional),
+    "lagoon.sh/insightsOutputFileMIMEType": ["text/html", "image/svg+xml"]  (optional)
+  }
+```
