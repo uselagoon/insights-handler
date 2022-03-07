@@ -5,13 +5,12 @@ import (
 	"regexp"
 )
 
-func keyFactsFilter(factsInput []LagoonFact) ([]LagoonFact, error) {
-
+func KeyFactsFilter(factsInput []LagoonFact) ([]LagoonFact, error) {
 	filteredFacts := make(map[string]LagoonFact)
 
 	factRegexes, err := scanKeyFactsFile("./key_facts.txt")
 	if err != nil {
-		fmt.Errorf("scan file error: %v", err)
+		fmt.Errorf("scan file error: %w", err)
 	}
 
 	for _, v := range factsInput {
@@ -29,7 +28,7 @@ func keyFactsFilter(factsInput []LagoonFact) ([]LagoonFact, error) {
 	}
 	v := make([]LagoonFact, 0, len(filteredFacts))
 
-	for  _, value := range filteredFacts {
+	for _, value := range filteredFacts {
 		v = append(v, value)
 	}
 	return v, nil

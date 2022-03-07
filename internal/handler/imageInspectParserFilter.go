@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/Khan/genqlient/graphql"
 	"log"
@@ -10,42 +9,39 @@ import (
 )
 
 func processImageInspectInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonFact, string, error) {
-
-	if insights.OutputCompressed {
-		decoded, err := decodeGzipString(v)
-		if err != nil {
-			fmt.Errorf(err.Error())
-		}
-
-		_, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
-		if apiErr != nil {
-			return nil, "", apiErr
-		}
-		source := fmt.Sprintf("image-inspect:%s", resource.Service)
-		log.Println(source)
-		marshallDecoded, err := json.Marshal(decoded)
-		var imageInspect ImageData
-		err = json.Unmarshal(marshallDecoded, &imageInspect)
-		if err != nil {
-			return nil, "", err
-		}
-
-		facts, err := processFactsFromImageInspect(imageInspect, environment.Id, source)
-		if err != nil {
-			return nil,"", err
-		}
-		log.Printf("Successfully decoded image-inspect")
-
-		facts, err = keyFactsFilter(facts)
-		if err != nil {
-			return nil,"", err
-		}
-
-		return facts, source, nil
+	decoded, err := decodeGzipString(v)
+	if err != nil {
+		fmt.Errorf(err.Error())
 	}
-	return []LagoonFact{}, "", errors.New("insights.OutputCompressed disabled - not processing incoming data")
-}
 
+	_, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
+	if apiErr != nil {
+		return nil, "", apiErr
+	}
+
+	source := fmt.Sprintf("image-inspect:%s", resource.Service)
+
+	marshallDecoded, err := json.Marshal(decoded)
+	var imageInspect ImageData
+
+	err = json.Unmarshal(marshallDecoded, &imageInspect)
+	if err != nil {
+		return nil, "", err
+	}
+
+	facts, err := processFactsFromImageInspect(imageInspect, environment.Id, source)
+	if err != nil {
+		return nil, "", err
+	}
+	log.Printf("Successfully decoded image-inspect")
+
+	facts, err = KeyFactsFilter(facts)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return facts, source, nil
+}
 
 func processFactsFromImageInspect(imageInspectData ImageData, id int, source string) ([]LagoonFact, error) {
 	var factsInput []LagoonFact

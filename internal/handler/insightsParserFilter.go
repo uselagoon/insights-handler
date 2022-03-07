@@ -22,7 +22,7 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 
 	res, err := ioutil.ReadAll(dec)
 	if err != nil {
-		return nil,"", err
+		return nil, "", err
 	}
 
 	fileType := http.DetectContentType(res)
@@ -36,11 +36,11 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 		// Compressed cyclonedx sbom
 		result, decErr := decodeGzipString(v)
 		if decErr != nil {
-			return nil,"", decErr
+			return nil, "", decErr
 		}
 		b, mErr := json.MarshalIndent(result, "", " ")
 		if mErr != nil {
-			return nil,"", mErr
+			return nil, "", mErr
 		}
 
 		decoder := cdx.NewBOMDecoder(bytes.NewReader(b), cdx.BOMFileFormatJSON)
@@ -52,14 +52,14 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 	// Determine lagoon resource destination
 	_, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
 	if apiErr != nil {
-		return nil,"", apiErr
+		return nil, "", apiErr
 	}
 	source := fmt.Sprintf("%s:%s", (*bom.Metadata.Component).Name, resource.Service)
 
 	// Process SBOM into facts
 	facts := processFactsFromSBOM(bom.Components, environment.Id, source)
 
-	facts, err = keyFactsFilter(facts)
+	facts, err = KeyFactsFilter(facts)
 	if err != nil {
 		return nil, "", err
 	}
@@ -72,10 +72,8 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 	log.Printf("- Generated: %s with %s\n", bom.Metadata.Timestamp, (*bom.Metadata.Tools)[0].Name)
 	log.Printf("- Packages found: %d\n", len(*bom.Components))
 
-
 	return facts, source, nil
 }
-
 
 func processFactsFromSBOM(facts *[]cdx.Component, environmentId int, source string) []LagoonFact {
 	var factsInput []LagoonFact

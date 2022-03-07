@@ -360,7 +360,6 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 
 		// Process Lagoon API integration
 		if !h.LagoonAPI.Disabled {
-
 			if insights.InsightsType != Sbom && insights.InsightsType != Image {
 				log.Println("only 'sbom' and 'image' types are currently supported for api processing")
 			} else {
@@ -390,9 +389,7 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 	// could potentially be moved into its own method
 	var processFactList = func(facts []LagoonFact, apiClient graphql.Client, resource ResourceDestination, source string, h *Messaging) error {
 		if len(facts) > 0 {
-
 			project, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
-
 			log.Printf("Matched %v number of facts for project:environment '%v:%v' from source '%v'", len(facts), project, environment, source)
 
 			apiErr = h.deleteExistingFactsBySource(apiClient, environment, source, project)
@@ -453,10 +450,8 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 					return err2
 				}
 			}
-
 		}
 	}
-
 
 	return nil
 }
