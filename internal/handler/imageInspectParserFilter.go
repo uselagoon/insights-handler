@@ -19,7 +19,7 @@ func processImageInspectInsightsData(h *Messaging, insights InsightsData, v stri
 		return nil, "", apiErr
 	}
 
-	source := fmt.Sprintf("image-inspect:%s", resource.Service)
+	source := fmt.Sprintf("insights:image:%s", resource.Service)
 
 	marshallDecoded, err := json.Marshal(decoded)
 	var imageInspect ImageData

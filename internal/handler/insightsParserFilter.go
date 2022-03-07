@@ -54,7 +54,7 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 	if apiErr != nil {
 		return nil, "", apiErr
 	}
-	source := fmt.Sprintf("%s:%s", (*bom.Metadata.Component).Name, resource.Service)
+	source := fmt.Sprintf("insights:sbom:%s", resource.Service)
 
 	// Process SBOM into facts
 	facts := processFactsFromSBOM(bom.Components, environment.Id, source)
