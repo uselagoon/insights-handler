@@ -9,38 +9,41 @@ import (
 )
 
 func processImageInspectInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonFact, string, error) {
-	decoded, err := decodeGzipString(v)
-	if err != nil {
-		fmt.Errorf(err.Error())
+	if insights.InsightsType == Image {
+		decoded, err := decodeGzipString(v)
+		if err != nil {
+			fmt.Errorf(err.Error())
+		}
+
+		_, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
+		if apiErr != nil {
+			return nil, "", apiErr
+		}
+
+		source := fmt.Sprintf("insights:image:%s", resource.Service)
+
+		marshallDecoded, err := json.Marshal(decoded)
+		var imageInspect ImageData
+
+		err = json.Unmarshal(marshallDecoded, &imageInspect)
+		if err != nil {
+			return nil, "", err
+		}
+
+		facts, err := processFactsFromImageInspect(imageInspect, environment.Id, source)
+		if err != nil {
+			return nil, "", err
+		}
+		log.Printf("Successfully decoded image-inspect")
+
+		facts, err = KeyFactsFilter(facts)
+		if err != nil {
+			return nil, "", err
+		}
+
+		return facts, source, nil
 	}
-
-	_, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
-	if apiErr != nil {
-		return nil, "", apiErr
-	}
-
-	source := fmt.Sprintf("insights:image:%s", resource.Service)
-
-	marshallDecoded, err := json.Marshal(decoded)
-	var imageInspect ImageData
-
-	err = json.Unmarshal(marshallDecoded, &imageInspect)
-	if err != nil {
-		return nil, "", err
-	}
-
-	facts, err := processFactsFromImageInspect(imageInspect, environment.Id, source)
-	if err != nil {
-		return nil, "", err
-	}
-	log.Printf("Successfully decoded image-inspect")
-
-	facts, err = KeyFactsFilter(facts)
-	if err != nil {
-		return nil, "", err
-	}
-
-	return facts, source, nil
+	return []LagoonFact{}, "", nil
 }
 
 func processFactsFromImageInspect(imageInspectData ImageData, id int, source string) ([]LagoonFact, error) {
@@ -78,4 +81,8 @@ func processFactsFromImageInspect(imageInspectData ImageData, id int, source str
 		})
 	}
 	return factsInput, nil
+}
+
+func init() {
+	RegisterParserFilter(processImageInspectInsightsData)
 }

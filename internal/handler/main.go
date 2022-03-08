@@ -426,28 +426,17 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 
 	if insights.InputPayload == BinaryPayload {
 		for _, v := range incoming.BinaryPayload {
-			if insights.InsightsType == Sbom {
-				facts, source, err = processSbomInsightsData(h, insights, v, apiClient, resource)
+
+			for _, filter := range parserFilters {
+				facts, source, err = filter(h, insights, v, apiClient, resource)
 				if err != nil {
 					log.Println("warning: unable to process sbom: ", fmt.Errorf(err.Error()))
 				}
-				err2 := processFactList(facts, apiClient, resource, source, h)
-				if err2 != nil {
-					return err2
-				}
-			}
-
-			if insights.InsightsType == Image {
-				facts, source, err = processImageInspectInsightsData(h, insights, v, apiClient, resource)
-				for _, fact := range facts {
-					log.Println(fact.Name)
-				}
-				if err != nil {
-					log.Println("warning: unable to process image data: ", fmt.Errorf(err.Error()))
-				}
-				err2 := processFactList(facts, apiClient, resource, source, h)
-				if err2 != nil {
-					return err2
+				if len(facts) > 0 {
+					err2 := processFactList(facts, apiClient, resource, source, h)
+					if err2 != nil {
+						return err2
+					}
 				}
 			}
 		}
