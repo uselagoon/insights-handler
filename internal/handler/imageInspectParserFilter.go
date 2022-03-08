@@ -8,6 +8,20 @@ import (
 	"strings"
 )
 
+//This becomes/implements the ParserFilter interface
+type ImageData struct {
+	Name          string            `json:"name"`
+	Digest        string            `json:"digest"`
+	RepoTags      []string          `json:"repoTags"`
+	Created       string            `json:"created"`
+	DockerVersion string            `json:"dockerVersion"`
+	Labels        map[string]string `json:"labels"`
+	Architecture  string            `json:"architecture"`
+	OS            string            `json:"os"`
+	Layers        []string          `json:"layers"`
+	Env           []string          `json:"env"`
+}
+
 func processImageInspectInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonFact, string, error) {
 	if insights.InsightsType == Image {
 		decoded, err := decodeGzipString(v)
@@ -70,15 +84,19 @@ func processFactsFromImageInspect(imageInspectData ImageData, id int, source str
 	}
 
 	for _, f := range filteredFacts {
-		factsInput = append(factsInput, LagoonFact{
+
+		fact := LagoonFact{
 			Environment: id,
 			Name:        f.Key,
 			Value:       f.Value,
 			Source:      source,
 			Category:    "Environment Variable",
-			KeyFact:     true,
+			KeyFact:     false,
 			Type:        FactTypeText,
-		})
+		}
+		fmt.Println("Processing fact name " + f.Key)
+		fact, _ = ProcessLagoonFactAgainstRegisteredFilters(fact, f)
+		factsInput = append(factsInput, fact)
 	}
 	return factsInput, nil
 }

@@ -154,19 +154,6 @@ func (p PayloadType) String() string {
 	return "PAYLOAD"
 }
 
-type ImageData struct {
-	Name          string            `json:"name"`
-	Digest        string            `json:"digest"`
-	RepoTags      []string          `json:"repoTags"`
-	Created       string            `json:"created"`
-	DockerVersion string            `json:"dockerVersion"`
-	Labels        map[string]string `json:"labels"`
-	Architecture  string            `json:"architecture"`
-	OS            string            `json:"os"`
-	Layers        []string          `json:"layers"`
-	Env           []string          `json:"env"`
-}
-
 type EnvironmentVariable struct {
 	Key   string
 	Value string
