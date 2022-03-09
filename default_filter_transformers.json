@@ -1,7 +1,7 @@
 {
   "transforms": [
     {
-      "type": "EnvironmentVariable",
+      "type": "handler.EnvironmentVariable",
       "lookupvalue": [
         {
           "name": "Key",
@@ -17,9 +17,23 @@
           "name": "Category",
           "value": "framework"
         }
-      ]
+      ],
+      "keyfact": true
     },
     {
+      "type": "cyclonedx.Component",
+      "lookupvalue": [
+        {
+          "name": "Name",
+          "value": "gettext-asprintf"
+        }
+      ],
+      "transformations": [
+        {
+          "name": "Name",
+          "value": "GetText ASPrintf"
+        }
+      ],
       "keyfact": true
     }
   ]

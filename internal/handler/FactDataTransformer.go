@@ -101,7 +101,7 @@ func (i *FactProcessor) isOfType(typename string) parserFilter {
 		return i
 	}
 
-	formattedTypename := "handler." + typename
+	formattedTypename := typename
 
 	if formattedTypename != fmt.Sprintf("%T", i.InsightsData) {
 		i.filteredOut = true //This type doesn't match, so we filter it out.
