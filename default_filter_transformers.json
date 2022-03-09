@@ -17,7 +17,9 @@
           "name": "Category",
           "value": "framework"
         }
-      ],
+      ]
+    },
+    {
       "keyfact": true
     }
   ]

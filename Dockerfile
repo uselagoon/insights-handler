@@ -23,8 +23,7 @@ FROM alpine:3.15
 WORKDIR /
 COPY --from=builder /go/src/github.com/uselagoon/lagoon/services/insights-handler/insights-handler .
 
-COPY syft_key_facts.txt /syft_key_facts.txt
-COPY env_var_key_facts.txt /env_var_key_facts.txt
+COPY default_filter_transformers.json /default_filter_transformers.json
 USER 65532:65532
 
 ENTRYPOINT ["/insights-handler"]

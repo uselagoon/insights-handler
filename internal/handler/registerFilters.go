@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 )
 
@@ -70,14 +69,14 @@ func GenerateFilterFromTransform(transform FactTransform) (func(filter parserFil
 			filter = filter.isOfType(transform.Type)
 		}
 
-		for i, _ := range transform.Lookupvalue {
+		for i := range transform.Lookupvalue {
 
 			n := transform.Lookupvalue[i].Name
 			v := transform.Lookupvalue[i].Value
 			filter = filter.fieldContains(n, v)
 		}
 
-		for i, _ := range transform.Transformations {
+		for i := range transform.Transformations {
 			n := transform.Transformations[i].Name
 			v := transform.Transformations[i].Value
 			filter = filter.setFactField(n, v)
@@ -92,40 +91,16 @@ func GenerateFilterFromTransform(transform FactTransform) (func(filter parserFil
 
 }
 
-func init() {
+func RegisterFiltersFromJson(filename string) error {
 
-	transforms, err := LoadTransformsFromDisk("./keyfacts.json")
+	transforms, err := LoadTransformsFromDisk(filename)
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
 	for _, transform := range transforms {
 		filter, _ := GenerateFilterFromTransform(transform)
 		registerFilter(filter)
 	}
 
-	//Some further examples of registering
-	// Let's register the standard key fact filters as they currently exist
-	//factRegexes, err := scanKeyFactsFile("./syft_key_facts.txt")
-	//if err != nil {
-	//	fmt.Errorf("scan file error: %w", err)
-	//}
-	//for _, k := range factRegexes {
-	//	workingRegex := k
-	//	registerFilter(func(filter parserFilter) parserFilter {
-	//		return filter.fieldContains("Name", workingRegex).setKeyFact(true)
-	//	})
-	//}
-	//
-	//// Let's register the standard key fact filters as they currently exist
-	//factRegexes, err = scanKeyFactsFile("./env_var_key_facts.txt")
-	//if err != nil {
-	//	fmt.Errorf("scan file error: %w", err)
-	//}
-	//for _, k := range factRegexes {
-	//	workingRegex := k
-	//	registerFilter(func(filter parserFilter) parserFilter {
-	//		return filter.fieldContains("Key", workingRegex).setKeyFact(true)
-	//	})
-	//}
-
+	return nil
 }

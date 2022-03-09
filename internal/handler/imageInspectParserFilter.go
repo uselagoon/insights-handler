@@ -90,7 +90,7 @@ func processFactsFromImageInspect(imageInspectData ImageData, id int, source str
 			Name:        f.Key,
 			Value:       f.Value,
 			Source:      source,
-			Category:    "Environment Variable",
+			Description: "Environment Variable",
 			KeyFact:     false,
 			Type:        FactTypeText,
 		}
