@@ -34,6 +34,7 @@ var (
 	s3Bucket                     string
 	s3Region                     string
 	s3AccessKeyID                string
+	filterTransformerFile        string
 	useSSL                       bool
 	disableS3Upload              bool
 	disableAPIIntegration        bool
@@ -62,6 +63,7 @@ func main() {
 	flag.StringVar(&s3AccessKeyID, "access-key-id", "minio", "The name of the s3Bucket to use.")
 	flag.StringVar(&s3Bucket, "s3-bucket", "lagoon-insights", "The s3 bucket name.")
 	flag.StringVar(&s3Region, "s3-region", "", "The s3 region.")
+	flag.StringVar(&filterTransformerFile, "filter-transformer-file", "./default_filter_transformers.json", "The filter/transformers to load.")
 	flag.BoolVar(&disableS3Upload, "disable-s3-upload", false, "Disable uploading insights data to an s3 s3Bucket")
 	flag.BoolVar(&disableAPIIntegration, "disable-api-integration", false, "Disable insights data integration for the Lagoon API")
 	flag.BoolVar(&enableDebug, "debug", false, "Enable debugging output")
@@ -84,6 +86,7 @@ func main() {
 	s3SecretAccessKey = getEnv("S3_FILES_SECRET_ACCESS_KEY", s3SecretAccessKey)
 	s3Bucket = getEnv("S3_FILES_BUCKET", s3Bucket)
 	s3Region = getEnv("S3_FILES_REGION", s3Region)
+	filterTransformerFile = getEnv("FILTER_TRANSFORMER_FILE", filterTransformerFile)
 	useSSL := false
 
 	// configure the backup handler settings
@@ -110,6 +113,12 @@ func main() {
 		Region:          s3Region,
 		UseSSL:          useSSL,
 		Disabled:        disableS3Upload,
+	}
+
+	log.Println("Registering Fact Filters/Transformser")
+	err := handler.RegisterFiltersFromJson(filterTransformerFile)
+	if err != nil {
+		log.Println(err)
 	}
 
 	log.Println("insights-handler running...")

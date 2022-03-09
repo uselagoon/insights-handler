@@ -96,15 +96,18 @@ func processFactsFromSBOM(facts *[]cdx.Component, environmentId int, source stri
 	}
 
 	for _, f := range filteredFacts {
-		factsInput = append(factsInput, LagoonFact{
+		fact := LagoonFact{
 			Environment: environmentId,
 			Name:        f.Name,
 			Value:       f.Version,
 			Source:      source,
 			Description: f.PackageURL,
-			KeyFact:     true,
+			KeyFact:     false,
 			Type:        FactTypeText,
-		})
+		}
+		fmt.Println("Processing fact name " + f.Name)
+		fact, _ = ProcessLagoonFactAgainstRegisteredFilters(fact, f)
+		factsInput = append(factsInput, fact)
 	}
 	return factsInput
 }

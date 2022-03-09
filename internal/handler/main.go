@@ -154,19 +154,6 @@ func (p PayloadType) String() string {
 	return "PAYLOAD"
 }
 
-type ImageData struct {
-	Name          string            `json:"name"`
-	Digest        string            `json:"digest"`
-	RepoTags      []string          `json:"repoTags"`
-	Created       string            `json:"created"`
-	DockerVersion string            `json:"dockerVersion"`
-	Labels        map[string]string `json:"labels"`
-	Architecture  string            `json:"architecture"`
-	OS            string            `json:"os"`
-	Layers        []string          `json:"layers"`
-	Env           []string          `json:"env"`
-}
-
 type EnvironmentVariable struct {
 	Key   string
 	Value string
@@ -388,15 +375,18 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 	// Just wrapping this in a function to clean up the calls near the bottom of this function
 	// could potentially be moved into its own method
 	var processFactList = func(facts []LagoonFact, apiClient graphql.Client, resource ResourceDestination, source string, h *Messaging) error {
+
+		project, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
+		log.Printf("Matched %v number of facts for project:environment '%v:%v' from source '%v'", len(facts), project, environment, source)
+
+		// Even if we don't find any new facts, we need to delete the existing ones
+		// since these may be the end product of a filter process
+		apiErr = h.deleteExistingFactsBySource(apiClient, environment, source, project)
+		if apiErr != nil {
+			return apiErr
+		}
+
 		if len(facts) > 0 {
-			project, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
-			log.Printf("Matched %v number of facts for project:environment '%v:%v' from source '%v'", len(facts), project, environment, source)
-
-			apiErr = h.deleteExistingFactsBySource(apiClient, environment, source, project)
-			if apiErr != nil {
-				return apiErr
-			}
-
 			apiErr = h.pushFactsToLagoonApi(facts, resource)
 			if apiErr != nil {
 				return apiErr

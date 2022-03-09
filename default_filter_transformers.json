@@ -1,0 +1,44 @@
+{
+  "transforms": [
+    {
+      "type": "handler.EnvironmentVariable",
+      "lookupvalue": [
+        {
+          "name": "Key",
+          "value": "PHP_VERSION"
+        }
+      ],
+      "transformations": [
+        {
+          "name": "Name",
+          "value": "PHP"
+        },
+        {
+          "name": "Category",
+          "value": "framework"
+        },
+        {
+          "name": "Description",
+          "value": "The currently installed PHP version"
+        }
+      ],
+      "keyfact": true
+    },
+    {
+      "type": "cyclonedx.Component",
+      "lookupvalue": [
+        {
+          "name": "Name",
+          "value": "gettext-asprintf"
+        }
+      ],
+      "transformations": [
+        {
+          "name": "Name",
+          "value": "GetText ASPrintf"
+        }
+      ],
+      "keyfact": true
+    }
+  ]
+}
