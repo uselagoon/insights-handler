@@ -16,6 +16,10 @@
         {
           "name": "Category",
           "value": "framework"
+        },
+        {
+          "name": "Description",
+          "value": "The currently installed PHP version"
         }
       ],
       "keyfact": true

@@ -191,6 +191,6 @@ func TestFactProcessor_TestSetFriendlyName(t *testing.T) {
 		setFactField("Name", "friendlyname")
 
 	if fp1.Fact.Name != "friendlyname" {
-		t.Errorf("Should be hable to set LagoonFact.Name")
+		t.Errorf("Should be able to set LagoonFact.Name")
 	}
 }
