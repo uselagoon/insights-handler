@@ -1,0 +1,24 @@
+{
+  "transforms": [
+    {
+      "type": "EnvironmentVariable",
+      "lookupvalue": [
+        {
+          "name": "Key",
+          "value": "PHP_VERSION"
+        }
+      ],
+      "transformations": [
+        {
+          "name": "Name",
+          "value": "PHP"
+        },
+        {
+          "name": "Category",
+          "value": "framework"
+        }
+      ],
+      "keyfact": true
+    }
+  ]
+}
