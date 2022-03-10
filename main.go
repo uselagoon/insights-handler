@@ -115,7 +115,7 @@ func main() {
 		Disabled:        disableS3Upload,
 	}
 
-	log.Println("Registering Fact Filters/Transformser")
+	log.Println("Registering Fact Filters/Transformer")
 	err := handler.RegisterFiltersFromJson(filterTransformerFile)
 	if err != nil {
 		log.Println(err)
