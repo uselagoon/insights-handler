@@ -5,7 +5,8 @@
       "lookupvalue": [
         {
           "name": "Key",
-          "value": "PHP_VERSION"
+          "value": "PHP_VERSION",
+          "exactMatch": true
         }
       ],
       "transformations": [
