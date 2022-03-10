@@ -55,6 +55,11 @@ func processImageInspectInsightsData(h *Messaging, insights InsightsData, v stri
 			return nil, "", err
 		}
 
+		facts, err = FactDuplicateHandler(facts)
+		if err != nil {
+			return nil, "", err
+		}
+
 		return facts, source, nil
 	}
 	return []LagoonFact{}, "", nil

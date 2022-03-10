@@ -65,6 +65,11 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 			return nil, "", err
 		}
 
+		facts, err = FactDuplicateHandler(facts)
+		if err != nil {
+			return nil, "", err
+		}
+
 		if len(facts) == 0 {
 			return nil, "", fmt.Errorf("no facts to process")
 		}
