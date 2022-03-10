@@ -39,6 +39,10 @@
         }
       ],
       "keyfact": true
+    },
+    {
+      "type": "handler.InsightsInspectLabel",
+      "keyfact": true
     }
   ]
 }

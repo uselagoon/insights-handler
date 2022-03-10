@@ -44,12 +44,16 @@ func processImageInspectInsightsData(h *Messaging, insights InsightsData, v stri
 			return nil, "", err
 		}
 
-		facts, err := processFactsFromImageInspect(imageInspect, environment.Id, source)
+		facts, err := processEnvironmentVariableFactsFromImageInspect(imageInspect, environment.Id, source)
 		if err != nil {
 			return nil, "", err
 		}
+		labelFacts, err := processLabelFactsFromImageInspect(imageInspect, environment.Id, source)
+		if err != nil {
+			return nil, "", err
+		}
+		facts = append(facts, labelFacts...)
 		log.Printf("Successfully decoded image-inspect")
-
 		facts, err = KeyFactsFilter(facts)
 		if err != nil {
 			return nil, "", err
@@ -60,7 +64,48 @@ func processImageInspectInsightsData(h *Messaging, insights InsightsData, v stri
 	return []LagoonFact{}, "", nil
 }
 
-func processFactsFromImageInspect(imageInspectData ImageData, id int, source string) ([]LagoonFact, error) {
+func processLabelFactsFromImageInspect(imageInspectData ImageData, id int, source string) ([]LagoonFact, error) {
+	var factsInput []LagoonFact
+
+	var filteredFacts []InsightsInspectLabel
+	keyFactsExistMap := make(map[string]bool)
+
+	// Check if image inspect contains useful environment variables
+	if imageInspectData.Labels != nil {
+		for k, v := range imageInspectData.Labels {
+
+			env := InsightsInspectLabel{
+				Key:   k,
+				Value: v,
+			}
+
+			// Remove duplicate key facts
+			if _, ok := keyFactsExistMap[env.Key]; !ok {
+				keyFactsExistMap[env.Key] = true
+				filteredFacts = append(filteredFacts, env)
+			}
+		}
+	}
+
+	for _, f := range filteredFacts {
+
+		fact := LagoonFact{
+			Environment: id,
+			Name:        f.Key,
+			Value:       f.Value,
+			Source:      source,
+			Description: "Insights Inspect Label",
+			KeyFact:     false,
+			Type:        FactTypeText,
+		}
+		fmt.Println("Processing fact name " + f.Key)
+		fact, _ = ProcessLagoonFactAgainstRegisteredFilters(fact, f)
+		factsInput = append(factsInput, fact)
+	}
+	return factsInput, nil
+}
+
+func processEnvironmentVariableFactsFromImageInspect(imageInspectData ImageData, id int, source string) ([]LagoonFact, error) {
 	var factsInput []LagoonFact
 
 	var filteredFacts []EnvironmentVariable
