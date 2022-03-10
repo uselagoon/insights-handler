@@ -8,6 +8,7 @@ type parserFilter interface {
 	getError() error
 	isOfType(typename string) parserFilter
 	fieldContains(fieldname string, regex string) parserFilter
+	fieldContainsExactMatch(fieldname string, match string) parserFilter
 	setKeyFact(isKeyFact bool) parserFilter
 	setFactField(fieldname string, value string) parserFilter
 	getFact() LagoonFact

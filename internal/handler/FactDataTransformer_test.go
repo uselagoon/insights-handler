@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -193,4 +194,62 @@ func TestFactProcessor_TestSetFriendlyName(t *testing.T) {
 	if fp1.Fact.Name != "friendlyname" {
 		t.Errorf("Should be able to set LagoonFact.Name")
 	}
+}
+
+func TestFactProcessor_TestExactMatchLookup(t *testing.T) {
+
+	genfp := func() FactProcessor {
+		return FactProcessor{
+			Fact: LagoonFact{
+				Id:          0,
+				Environment: 0,
+				Name:        "testKey",
+				Value:       "testvalue",
+				Source:      "",
+				Description: "",
+				KeyFact:     false,
+				Type:        "",
+				Category:    "",
+			},
+			InsightsData: EnvironmentVariable{
+				Key:   "testkey",
+				Value: "testvalue",
+			},
+			hasErrorState: false,
+			theError:      nil,
+		}
+	}
+
+	fp1 := genfp()
+
+	//First we test regex matching
+	fp1.isOfType("EnvironmentVariable").
+		fieldContains("Key", "test").
+		setFactField("Name", "friendlyname")
+
+	if fp1.Fact.Name != "friendlyname" {
+		t.Errorf("The regex `test` should match `testkey`")
+	}
+
+	fp1 = genfp()
+	//Now we test a non-exact match
+	fp1.isOfType("EnvironmentVariable").
+		fieldContainsExactMatch("Key", "test").
+		setFactField("Name", "shouldnotbeset")
+
+	if fp1.Fact.Name == "shouldnotbeset" {
+		t.Errorf("The regex `test` should not match `shouldnotbeset`")
+	}
+
+	fp1 = genfp()
+	//Now we test an exact match
+	fp1.isOfType("EnvironmentVariable").
+		fieldContainsExactMatch("Key", "testkey").
+		setFactField("Name", "shouldbeset")
+
+	fmt.Println(fp1.InsightsData)
+	if fp1.Fact.Name != "shouldbeset" {
+		t.Errorf("The regex `test` should match `shouldbeset`")
+	}
+
 }

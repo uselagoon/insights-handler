@@ -5,7 +5,8 @@
       "lookupvalue": [
         {
           "name": "Key",
-          "value": "PHP_VERSION"
+          "value": "PHP_VERSION",
+          "exactMatch": true
         }
       ],
       "transformations": [
@@ -15,7 +16,7 @@
         },
         {
           "name": "Category",
-          "value": "framework"
+          "value": "Language"
         },
         {
           "name": "Description",
@@ -29,13 +30,63 @@
       "lookupvalue": [
         {
           "name": "Name",
-          "value": "gettext-asprintf"
+          "value": "drupal/core",
+          "exactMatch": true
         }
       ],
       "transformations": [
         {
           "name": "Name",
-          "value": "GetText ASPrintf"
+          "value": "Drupal"
+        },
+        {
+          "name": "Category",
+          "value": "Application"
+        }
+      ],
+      "keyfact": true
+    },
+    {
+      "type": "cyclonedx.Component",
+      "lookupvalue": [
+        {
+          "name": "Name",
+          "value": "alpine",
+          "exactMatch": true
+        }
+      ],
+      "transformations": [
+        {
+          "name": "Name",
+          "value": "Alpine Linux"
+        },
+        {
+          "name": "Category",
+          "value": "OS"
+        },
+        {
+          "name": "Description",
+          "value": "Base image Alpine Linux version"
+        }
+      ],
+      "keyfact": true
+    },
+    {
+      "type": "cyclonedx.Component",
+      "lookupvalue": [
+        {
+          "name": "Name",
+          "value": "drush/drush"
+        }
+      ],
+      "transformations": [
+        {
+          "name": "Name",
+          "value": "Drush"
+        },
+        {
+          "name": "Category",
+          "value": "Helper"
         }
       ],
       "keyfact": true

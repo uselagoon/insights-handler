@@ -58,7 +58,14 @@ func (i *FactProcessor) setKeyFact(isKeyFact bool) parserFilter {
 	return i
 }
 
+func (i *FactProcessor) fieldContainsExactMatch(fieldname string, match string) parserFilter {
+	return fieldContainsBackend(i, fieldname, match, true)
+}
+
 func (i *FactProcessor) fieldContains(fieldname string, regex string) parserFilter {
+	return fieldContainsBackend(i, fieldname, regex, false)
+}
+func fieldContainsBackend(i *FactProcessor, fieldname string, regex string, exactmatch bool) parserFilter {
 	if i.hasError() || i.isFilteredOut() {
 		return i
 	}
@@ -76,11 +83,16 @@ func (i *FactProcessor) fieldContains(fieldname string, regex string) parserFilt
 		return i
 	}
 
-	hasMatch, err := regexp.Match(regex, []byte(f.String()))
-	if err != nil {
-		i.hasErrorState = true
-		i.theError = err
-		return i
+	hasMatch := regex == f.String()
+
+	if !exactmatch {
+		regexmatch, err := regexp.Match(regex, []byte(f.String()))
+		hasMatch = regexmatch
+		if err != nil {
+			i.hasErrorState = true
+			i.theError = err
+			return i
+		}
 	}
 
 	if !hasMatch {
@@ -96,12 +108,27 @@ func (i *FactProcessor) getError() error {
 	return i.theError
 }
 
+func typeMap(alias string) string {
+	switch alias {
+	case "EnvironmentVariable":
+		return "handler.EnvironmentVariable"
+		break
+	case "Package":
+		return "cyclonedx.Component"
+		break
+	case "InspectLabel":
+		return "handler.InsightsInspectLabel"
+		break
+	}
+	return alias
+}
+
 func (i *FactProcessor) isOfType(typename string) parserFilter {
 	if i.hasError() || i.isFilteredOut() {
 		return i
 	}
 
-	formattedTypename := typename
+	formattedTypename := typeMap(typename)
 
 	if formattedTypename != fmt.Sprintf("%T", i.InsightsData) {
 		i.filteredOut = true //This type doesn't match, so we filter it out.

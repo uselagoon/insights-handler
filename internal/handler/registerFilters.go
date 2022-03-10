@@ -12,9 +12,15 @@ type FactTransformNameValue struct {
 	Value string `json:"value"`
 }
 
+type FactLookupNameValue struct {
+	Name       string `json:"name"`
+	Value      string `json:"value"`
+	ExactMatch bool   `json:"exactMatch"`
+}
+
 type FactTransform struct {
 	Type            string                   `json:"type"`
-	Lookupvalue     []FactTransformNameValue `json:"lookupvalue"`
+	Lookupvalue     []FactLookupNameValue    `json:"lookupvalue"`
 	Transformations []FactTransformNameValue `json:"transformations"`
 	Keyfact         bool                     `json:"keyfact"`
 }
@@ -73,7 +79,13 @@ func GenerateFilterFromTransform(transform FactTransform) (func(filter parserFil
 
 			n := transform.Lookupvalue[i].Name
 			v := transform.Lookupvalue[i].Value
-			filter = filter.fieldContains(n, v)
+			em := transform.Lookupvalue[i].ExactMatch
+			if em {
+				filter = filter.fieldContainsExactMatch(n, v)
+			} else {
+				filter = filter.fieldContains(n, v)
+			}
+
 		}
 
 		for i := range transform.Transformations {
