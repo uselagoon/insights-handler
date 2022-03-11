@@ -554,7 +554,7 @@ func (h *Messaging) sendToLagoonS3(incoming *InsightsMessage, insights InsightsD
 				}
 			}
 
-			s3FilePath := strings.ToLower(fmt.Sprintf("%s/%s/%s", resource.Project, resource.Environment, objectName))
+			s3FilePath := strings.ToLower(fmt.Sprintf("insights/%s/%s/%s", resource.Project, resource.Environment, objectName))
 			info, err := minioClient.FPutObject(ctx, h.S3Config.Bucket, s3FilePath, tempFilePath, minio.PutObjectOptions{
 				ContentType:     contentType,
 				ContentEncoding: contentEncoding,
