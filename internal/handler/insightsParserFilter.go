@@ -58,7 +58,7 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 		source := fmt.Sprintf("insights:sbom:%s", resource.Service)
 
 		// Process SBOM into facts
-		facts := processFactsFromSBOM(bom.Components, environment.Id, source)
+		facts := processFactsFromSBOM(bom.Components, environment.Id, source, resource.Service)
 
 		facts, err = KeyFactsFilter(facts)
 		if err != nil {
@@ -83,7 +83,7 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 	return []LagoonFact{}, "", nil
 }
 
-func processFactsFromSBOM(facts *[]cdx.Component, environmentId int, source string) []LagoonFact {
+func processFactsFromSBOM(facts *[]cdx.Component, environmentId int, source string, service string) []LagoonFact {
 	var factsInput []LagoonFact
 	if len(*facts) == 0 {
 		return factsInput
@@ -106,9 +106,14 @@ func processFactsFromSBOM(facts *[]cdx.Component, environmentId int, source stri
 			Name:        f.Name,
 			Value:       f.Version,
 			Source:      source,
+			Service:     service,
 			Description: f.PackageURL,
 			KeyFact:     false,
-			Type:        FactTypeText,
+			OriginalFact: PreTransformedFact{
+				Name:  f.Name,
+				Value: f.Version,
+			},
+			Type: FactTypeText,
 		}
 		fmt.Println("Processing fact name " + f.Name)
 		fact, _ = ProcessLagoonFactAgainstRegisteredFilters(fact, f)

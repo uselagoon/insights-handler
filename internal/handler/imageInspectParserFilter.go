@@ -89,7 +89,6 @@ func processFactsFromImageInspect(imageInspectData ImageData, id int, source str
 	}
 
 	for _, f := range filteredFacts {
-
 		fact := LagoonFact{
 			Environment: id,
 			Name:        f.Key,

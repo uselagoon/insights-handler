@@ -7,13 +7,13 @@ import (
 )
 
 type Project struct {
-	Id   int
-	Name string
+	Id   int    `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 type Environment struct {
-	Id   int
-	Name string
+	Id   int    `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 type Fact struct {

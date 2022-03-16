@@ -14,6 +14,7 @@ type AddFactInput struct {
 	Name        string   `json:"name"`
 	Value       string   `json:"value"`
 	Source      string   `json:"source"`
+	Service     string   `json:"service"`
 	Description string   `json:"description"`
 	KeyFact     bool     `json:"keyFact"`
 	Type        FactType `json:"type"`
