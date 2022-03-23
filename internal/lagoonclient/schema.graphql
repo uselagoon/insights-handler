@@ -112,6 +112,7 @@ input AddFactInput {
   name: String!
   value: String!
   source: String!
+  service: String!
   description: String!
   keyFact: Boolean
   type: FactType
@@ -865,6 +866,7 @@ type Fact {
   name: String
   value: String
   source: String
+  service: String
   description: String
   keyFact: Boolean
   type: FactType
@@ -1954,6 +1956,7 @@ input UpdateFactInputValue {
   name: String!
   value: String!
   source: String!
+  service: String!
   description: String
   keyFact: Boolean
   type: FactType

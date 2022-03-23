@@ -46,7 +46,6 @@ func ProcessLagoonFactAgainstRegisteredFilters(fact LagoonFact, insightsRawData 
 		if !pfout.isFilteredOut() {
 			fact = pfout.getFact()
 		}
-
 	}
 	return fact, nil
 }
@@ -68,15 +67,12 @@ func LoadTransformsFromDisk(filename string) ([]FactTransform, error) {
 }
 
 func GenerateFilterFromTransform(transform FactTransform) (func(filter parserFilter) parserFilter, error) {
-
 	return func(filter parserFilter) parserFilter {
-
 		if transform.Type != "" {
 			filter = filter.isOfType(transform.Type)
 		}
 
 		for i := range transform.Lookupvalue {
-
 			n := transform.Lookupvalue[i].Name
 			v := transform.Lookupvalue[i].Value
 			em := transform.Lookupvalue[i].ExactMatch
@@ -85,7 +81,6 @@ func GenerateFilterFromTransform(transform FactTransform) (func(filter parserFil
 			} else {
 				filter = filter.fieldContains(n, v)
 			}
-
 		}
 
 		for i := range transform.Transformations {
@@ -104,7 +99,6 @@ func GenerateFilterFromTransform(transform FactTransform) (func(filter parserFil
 }
 
 func RegisterFiltersFromJson(filename string) error {
-
 	transforms, err := LoadTransformsFromDisk(filename)
 	if err != nil {
 		return err
