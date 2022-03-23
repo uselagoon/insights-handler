@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/cheshir/go-mq"
@@ -35,7 +36,7 @@ var (
 	s3Region                     string
 	s3AccessKeyID                string
 	filterTransformerFile        string
-	useSSL                       bool
+	s3useSSL                     bool
 	disableS3Upload              bool
 	disableAPIIntegration        bool
 	enableDebug                  bool
@@ -63,6 +64,7 @@ func main() {
 	flag.StringVar(&s3AccessKeyID, "access-key-id", "minio", "The name of the s3Bucket to use.")
 	flag.StringVar(&s3Bucket, "s3-bucket", "lagoon-insights", "The s3 bucket name.")
 	flag.StringVar(&s3Region, "s3-region", "", "The s3 region.")
+	flag.BoolVar(&s3useSSL, "s3-usessl", false, "Use SSL with S3")
 	flag.StringVar(&filterTransformerFile, "filter-transformer-file", "./default_filter_transformers.json", "The filter/transformers to load.")
 	flag.BoolVar(&disableS3Upload, "disable-s3-upload", false, "Disable uploading insights data to an s3 s3Bucket")
 	flag.BoolVar(&disableAPIIntegration, "disable-api-integration", false, "Disable insights data integration for the Lagoon API")
@@ -87,7 +89,7 @@ func main() {
 	s3Bucket = getEnv("S3_FILES_BUCKET", s3Bucket)
 	s3Region = getEnv("S3_FILES_REGION", s3Region)
 	filterTransformerFile = getEnv("FILTER_TRANSFORMER_FILE", filterTransformerFile)
-	useSSL := false
+	s3useSSL = getEnvBool("S3_USESSL", s3useSSL)
 
 	// configure the backup handler settings
 	broker := handler.RabbitBroker{
@@ -111,7 +113,7 @@ func main() {
 		AccessKeyId:     s3AccessKeyID,
 		Bucket:          s3Bucket,
 		Region:          s3Region,
-		UseSSL:          useSSL,
+		UseSSL:          s3useSSL,
 		Disabled:        disableS3Upload,
 	}
 
@@ -180,6 +182,16 @@ func main() {
 func getEnv(key, fallback string) string {
 	if value, ok := os.LookupEnv(key); ok {
 		return value
+	}
+	return fallback
+}
+
+// accepts fallback values 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False
+// anything else is false.
+func getEnvBool(key string, fallback bool) bool {
+	if value, ok := os.LookupEnv(key); ok {
+		rVal, _ := strconv.ParseBool(value)
+		return rVal
 	}
 	return fallback
 }
