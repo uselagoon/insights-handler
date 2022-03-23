@@ -159,6 +159,11 @@ type EnvironmentVariable struct {
 	Value string
 }
 
+type InsightsInspectLabel struct {
+	Key   string
+	Value string
+}
+
 type ResourceDestination struct {
 	Project     string
 	Environment string
