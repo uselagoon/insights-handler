@@ -1,0 +1,18 @@
+{
+  "payload": {
+    "data": {
+      "first":"001",
+      "second": "002"
+    }
+  },
+  "binaryPayload": {},
+  "annotations": {},
+  "labels": {
+    "lagoon.sh/project": "high-cotton",
+    "lagoon.sh/environment": "Master",
+    "lagoon.sh/service": "cli",
+    "lagoon.sh/insightsType": "direct",
+    "lagoon.sh/insightsOutputFileMIMEType": "application/json",
+    "lagoon.sh/insightsOutputFileExt": "json"
+  }
+}

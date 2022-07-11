@@ -103,6 +103,7 @@ const (
 	Raw = iota
 	Sbom
 	Image
+	Direct
 )
 
 func (i InsightType) String() string {
@@ -308,8 +309,13 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 			switch insights.InputType {
 			case "sbom", "sbom-gz":
 				insights.InsightsType = Sbom
+				break
 			case "image", "image-gz":
 				insights.InsightsType = Image
+				break
+			case "direct":
+				insights.InsightsType = Direct
+				break
 			default:
 				insights.InsightsType = Raw
 			}
@@ -339,16 +345,18 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 
 		// Process s3 upload
 		if !h.S3Config.Disabled {
-			err := h.sendToLagoonS3(incoming, insights, resource)
-			if err != nil {
-				log.Printf("Unable to send to S3: %s", err.Error())
+			if insights.InsightsType != Direct {
+				err := h.sendToLagoonS3(incoming, insights, resource)
+				if err != nil {
+					log.Printf("Unable to send to S3: %s", err.Error())
+				}
 			}
 		}
 
 		// Process Lagoon API integration
 		if !h.LagoonAPI.Disabled {
-			if insights.InsightsType != Sbom && insights.InsightsType != Image {
-				log.Println("only 'sbom' and 'image' types are currently supported for api processing")
+			if insights.InsightsType != Sbom && insights.InsightsType != Image && insights.InsightsType != Direct {
+				log.Println("only 'sbom', 'direct', and 'image' types are currently supported for api processing")
 			} else {
 				err := h.sendToLagoonAPI(incoming, resource, insights)
 				if err != nil {
@@ -401,15 +409,22 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 
 	if insights.InputPayload == Payload {
 		for _, v := range incoming.Payload {
-			if insights.InsightsType == Sbom {
+			var facts []LagoonFact
+			var source string
+			switch insights.InsightsType {
+			case Sbom:
 				facts, source, err = processSbomInsightsData(h, insights, v, apiClient, resource)
-				if err != nil {
-					log.Println(fmt.Errorf(err.Error()))
-				}
-				err2 := processFactList(facts, apiClient, resource, source, h)
-				if err2 != nil {
-					return err2
-				}
+				break
+			case Direct:
+				facts, source, err = processDirectInsightsData(h, insights, v, apiClient, resource)
+				break
+			}
+			if err != nil {
+				log.Println(fmt.Errorf(err.Error()))
+			}
+			err2 := processFactList(facts, apiClient, resource, source, h)
+			if err2 != nil {
+				return err2
 			}
 		}
 	}
