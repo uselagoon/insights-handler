@@ -80,15 +80,22 @@ type InsightsData struct {
 
 // LagoonFact Here we wrap outgoing facts before passing them to genqlient
 type LagoonFact struct {
-	Id          int    `json:"id"`
-	Environment int    `json:"environment"`
-	Name        string `json:"name"`
-	Value       string `json:"value"`
-	Source      string `json:"source"`
-	Description string `json:"description"`
-	KeyFact     bool   `json:"keyFact"`
-	Type        string `json:"type"`
-	Category    string `json:"category"`
+	Id           int                `json:"id"`
+	Environment  int                `json:"environment"`
+	Name         string             `json:"name"`
+	Value        string             `json:"value"`
+	Source       string             `json:"source"`
+	Service      string             `json:"service"`
+	Description  string             `json:"description"`
+	KeyFact      bool               `json:"keyFact"`
+	Type         string             `json:"type"`
+	OriginalFact PreTransformedFact `json:"originalFact"`
+	Category     string             `json:"category"`
+}
+
+type PreTransformedFact struct {
+	Name  string
+	Value string
 }
 
 const (
@@ -375,7 +382,6 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 	// Just wrapping this in a function to clean up the calls near the bottom of this function
 	// could potentially be moved into its own method
 	var processFactList = func(facts []LagoonFact, apiClient graphql.Client, resource ResourceDestination, source string, h *Messaging) error {
-
 		project, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
 		log.Printf("Matched %v number of facts for project:environment '%v:%v' from source '%v'", len(facts), project, environment, source)
 
@@ -416,7 +422,6 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 
 	if insights.InputPayload == BinaryPayload {
 		for _, v := range incoming.BinaryPayload {
-
 			for _, filter := range parserFilters {
 				facts, source, err = filter(h, insights, v, apiClient, resource)
 				if err != nil {
@@ -590,6 +595,7 @@ func (h *Messaging) pushFactsToLagoonApi(facts []LagoonFact, resource ResourceDe
 			Name:        fact.Name,
 			Value:       fact.Value,
 			Source:      fact.Source,
+			Service:     fact.Service,
 			Description: fact.Description,
 			KeyFact:     fact.KeyFact,
 			Type:        lagoonclient.FactType(fact.Type),
