@@ -1,40 +1,49 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/Khan/genqlient/graphql"
 )
 
 //This becomes/implements the ParserFilter interface
 type DirectInsightsData struct {
-	Data map[string]string `json:"data"`
+	Data map[string]struct {
+		Value       string `json:"value"`
+		Description string `json:"description"`
+	} `json:"data"`
 }
 
 func processDirectInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonFact, string, error) {
 	if insights.InsightsType == Direct {
 
-		fmt.Println("Processing Direct")
+		_, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
+		if apiErr != nil {
+			return nil, "", apiErr
+		}
+
+		source := fmt.Sprintf("insights:direct:%s", resource.Service)
+
+		var data DirectInsightsData
+		fmt.Print("About to unmarshall the following:")
 		fmt.Println(v)
-		//_, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
-		//if apiErr != nil {
-		//	return nil, "", apiErr
-		//}
-		//
-		//source := fmt.Sprintf("insights:image:%s", resource.Service)
-		//
-		//var data DirectInsightsData
-		//
-		//err = json.Unmarshal(data, insights.)
-		//if err != nil {
-		//	return nil, "", err
-		//}
+
+		err := json.Unmarshal([]byte(v), &data.Data)
+		if err != nil {
+			return nil, "", err
+		}
+		fmt.Println(environment)
+		fmt.Println(source)
+		fmt.Println(data)
+		for k, v := range data.Data {
+			fmt.Printf("%v:%v\n", k, v.Description)
+		}
 		//
 		//facts, err := processFactsFromDirect(DirectInsightsData, environment.Id, source)
 		//if err != nil {
 		//	return nil, "", err
 		//}
-		//log.Printf("Successfully decoded image-inspect")
-		//
+
 		//facts, err = KeyFactsFilter(facts)
 		//if err != nil {
 		//	return nil, "", err

@@ -1,8 +1,14 @@
 {
   "payload": {
     "data": {
-      "first":"001",
-      "second": "002"
+      "first": {
+        "value": "001",
+        "description": "first description here"
+      },
+      "second": {
+        "value": "001",
+        "description": "second description here"
+      }
     }
   },
   "binaryPayload": {},

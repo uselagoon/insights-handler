@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Khan/genqlient/graphql"
+	"github.com/cheshir/go-mq"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"io"
@@ -22,7 +23,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cheshir/go-mq"
 	"github.com/matryer/try"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient/jwt"
@@ -60,10 +60,18 @@ type S3 struct {
 }
 
 type InsightsMessage struct {
-	Payload       map[string]string `json:"payload"`
-	BinaryPayload map[string]string `json:"binaryPayload"`
-	Annotations   map[string]string `json:"annotations"`
-	Labels        map[string]string `json:"labels"`
+	Payload       map[string]json.RawMessage `json:"payload"`
+	BinaryPayload map[string]string          `json:"binaryPayload"`
+	Annotations   map[string]string          `json:"annotations"`
+	Labels        map[string]string          `json:"labels"`
+	Type          string                     `json:"type,omitempty"`
+}
+
+type InsightsMessageFacts struct {
+	Type            string `json:"type,omitempty"`
+	Environment     int    `json:"environment,omitempty"`
+	EnvironmentName string `json:"environmentName,omitempty"`
+	ProjectName     string `json:"projectName,omitempty"`
 }
 
 type InsightsData struct {
@@ -408,15 +416,17 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 	}
 
 	if insights.InputPayload == Payload {
-		for _, v := range incoming.Payload {
+		for x, v := range incoming.Payload {
 			var facts []LagoonFact
 			var source string
+			fmt.Println(x)
+			fmt.Println(v)
 			switch insights.InsightsType {
 			case Sbom:
-				facts, source, err = processSbomInsightsData(h, insights, v, apiClient, resource)
+				facts, source, err = processSbomInsightsData(h, insights, string(v), apiClient, resource)
 				break
 			case Direct:
-				facts, source, err = processDirectInsightsData(h, insights, v, apiClient, resource)
+				facts, source, err = processDirectInsightsData(h, insights, string(v), apiClient, resource)
 				break
 			}
 			if err != nil {
