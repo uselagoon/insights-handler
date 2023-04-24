@@ -22,7 +22,7 @@ type ImageData struct {
 	Env           []string          `json:"env"`
 }
 
-func processImageInspectInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonFact, string, error) {
+func processImageInspectInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]interface{}, string, error) {
 	if insights.InsightsType == Image {
 		decoded, err := decodeGzipString(v)
 		if err != nil {
@@ -55,9 +55,9 @@ func processImageInspectInsightsData(h *Messaging, insights InsightsData, v stri
 			return nil, "", err
 		}
 
-		return facts, source, nil
+		return []interface{}{facts}, source, nil
 	}
-	return []LagoonFact{}, "", nil
+	return []interface{}{}, "", nil
 }
 
 func processFactsFromImageInspect(imageInspectData ImageData, id int, source string) ([]LagoonFact, error) {

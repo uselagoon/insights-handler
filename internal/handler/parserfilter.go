@@ -1,6 +1,8 @@
 package handler
 
-import "github.com/Khan/genqlient/graphql"
+import (
+	"github.com/Khan/genqlient/graphql"
+)
 
 type parserFilter interface {
 	isFilteredOut() bool
@@ -14,8 +16,8 @@ type parserFilter interface {
 	getFact() LagoonFact
 }
 
-var parserFilters []func(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonFact, string, error)
+var parserFilters []func(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]interface{}, string, error)
 
-func RegisterParserFilter(pf func(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonFact, string, error)) {
+func RegisterParserFilter(pf func(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]interface{}, string, error)) {
 	parserFilters = append(parserFilters, pf)
 }
