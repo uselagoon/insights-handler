@@ -1,0 +1,66 @@
+{
+  "payload": [
+    {
+      "problems": [
+        {
+          "environment": 3,
+          "identifier": "CVE-2020-8911",
+          "associatedPackage": "github.com/aws/aws-sdk-go",
+          "version": "v1.34.21",
+          "fixedVersion": "v1.34.22",
+          "source": "insights:problems:trivy-vuln-report",
+          "service": "nginx",
+          "data": "{}",
+          "severity": "MEDIUM",
+          "description": "aws/aws-sdk-go: CBC padding oracle issue in AWS S3 Crypto SDK for golang",
+          "links": "https://avd.aquasec.com/nvd/cve-2020-8911",
+          "severityScore": 0.56
+        },
+        {
+          "environment": 3,
+          "identifier": "CVE-2020-8912",
+          "associatedPackage": "github.com/aws/aws-sdk-go",
+          "version": "v1.34.21",
+          "fixedVersion": "v1.34.22",
+          "source": "insights:problems:trivy-vuln-report",
+          "service": "nginx",
+          "data": "{}",
+          "severity": "LOW",
+          "description": "aws-sdk-go: In-band key negotiation issue in AWS S3 Crypto SDK for golang",
+          "links": "https://avd.aquasec.com/nvd/cve-2020-8912",
+          "severityScore": 0.25
+        },
+        {
+          "environment": 3,
+          "identifier": "CVE-2022-28923",
+          "associatedPackage": "github.com/caddyserver/caddy",
+          "version": "v1.0.5",
+          "fixedVersion": "v2.5.0",
+          "source": "insights:problems:trivy-vuln-report",
+          "service": "nginx",
+          "data": "{}",
+          "severity": "MEDIUM",
+          "description": "caddy: an open redirection vulnerability which allows attackers to redirect users to phishing websites via crafted URLs",
+          "links": "https://avd.aquasec.com/nvd/cve-2022-28923",
+          "severityScore": 0.75
+        }
+      ]
+    }
+  ],
+  "binaryPayload": {},
+  "annotations": {
+    "lagoon.sh/insightsProcessed": "true",
+    "trivy-operator.aquasecurity.github.io/report-ttl": "24h0m0s"
+  },
+  "labels": {
+    "lagoon.sh/insightsType": "trivy-vuln-report",
+    "lagoon.sh/project": "high-cotton",
+    "lagoon.sh/environment": "Master",
+    "lagoon.sh/service": "nginx",
+    "resource-spec-hash": "59dd7c959b",
+    "trivy-operator.container.name": "nginx",
+    "trivy-operator.resource.kind": "ReplicaSet",
+    "trivy-operator.resource.name": "nginx-54798d9787",
+    "trivy-operator.resource.namespace": "high-cotton-master"
+  }
+}
