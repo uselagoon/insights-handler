@@ -6,7 +6,7 @@
       {
         "name": "drupal-core",
         "value": "9.0.1",
-        "environment": 90266,
+        "environment": 18,
         "source": "drush-pml",
         "description": "Drupal CMS version found on environment",
         "category": "Framework",
@@ -16,7 +16,7 @@
       {
         "name": "php-version",
         "value": "8.0.3",
-        "environment": 90266,
+        "environment": 18,
         "source": "drush-pml",
         "description": "PHP version found on environment",
         "category": "Programming language",

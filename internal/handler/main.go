@@ -495,12 +495,12 @@ func (h *Messaging) sendFactsToLagoonAPI(facts []LagoonFact, apiClient graphql.C
 func (h *Messaging) sendProblemsToLagoonAPI(problems []LagoonProblem, client graphql.Client, resource ResourceDestination, source string) error {
 	project, environment, apiErr := determineResourceFromLagoonAPI(client, resource)
 	if apiErr != nil {
-		return fmt.Errorf("%w", apiErr.Error())
+		return fmt.Errorf("failed to determine resource from Lagoon API: %v", apiErr)
 	}
 
 	apiErr = h.deleteExistingProblemsBySource(client, environment, source, resource.Service, project)
 	if apiErr != nil {
-		return fmt.Errorf("%s", apiErr.Error())
+		return fmt.Errorf("failed to delete existing problems from Lagoon API: %v", apiErr)
 	}
 
 	if len(problems) > 0 {
