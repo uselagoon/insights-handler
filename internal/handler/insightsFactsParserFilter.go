@@ -3,17 +3,18 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Khan/genqlient/graphql"
 	"io/ioutil"
 	"log"
 	"strings"
+
+	"github.com/Khan/genqlient/graphql"
 )
 
 type FactsPayload struct {
 	Facts []LagoonFact `json:"facts,omitempty"`
 }
 
-func processFactsInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]interface{}, string, error) {
+func processFactsInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonFact, string, error) {
 	if insights.LagoonType == Facts && insights.InsightsType == Raw {
 		r := strings.NewReader(v)
 
@@ -39,15 +40,9 @@ func processFactsInsightsData(h *Messaging, insights InsightsData, v string, api
 		log.Printf("Successfully processed facts")
 		log.Printf("- Facts found: %d\n", len(facts))
 
-		// convert []LagoonFact to []interface{}
-		result := make([]interface{}, len(facts))
-		for i, f := range facts {
-			result[i] = f
-		}
-
-		return result, source, nil
+		return facts, source, nil
 	}
-	return []interface{}{}, "", nil
+	return nil, "", nil
 }
 
 func processFactsFromJSON(facts []byte, source string) []LagoonFact {

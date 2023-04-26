@@ -5,17 +5,18 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	cdx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/Khan/genqlient/graphql"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
+
+	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/Khan/genqlient/graphql"
 )
 
-func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]interface{}, string, error) {
+func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonFact, string, error) {
 	if insights.InsightsType != Sbom {
-		return []interface{}{}, "", nil
+		return []LagoonFact{}, "", nil
 	}
 
 	bom := new(cdx.BOM)
@@ -76,12 +77,7 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 	log.Printf("- Generated: %s with %s\n", bom.Metadata.Timestamp, (*bom.Metadata.Tools)[0].Name)
 	log.Printf("- Packages found: %d\n", len(*bom.Components))
 
-	var interfaceFacts []interface{}
-	for _, fact := range facts {
-		interfaceFacts = append(interfaceFacts, fact)
-	}
-
-	return interfaceFacts, source, nil
+	return facts, source, nil
 }
 
 func processFactsFromSBOM(facts *[]cdx.Component, environmentId int, source string) []LagoonFact {

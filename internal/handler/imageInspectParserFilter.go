@@ -3,12 +3,13 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Khan/genqlient/graphql"
 	"log"
 	"strings"
+
+	"github.com/Khan/genqlient/graphql"
 )
 
-//This becomes/implements the ParserFilter interface
+// This becomes/implements the ParserFilter interface
 type ImageData struct {
 	Name          string            `json:"name"`
 	Digest        string            `json:"digest"`
@@ -22,7 +23,7 @@ type ImageData struct {
 	Env           []string          `json:"env"`
 }
 
-func processImageInspectInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]interface{}, string, error) {
+func processImageInspectInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonFact, string, error) {
 	if insights.InsightsType == Image {
 		decoded, err := decodeGzipString(v)
 		if err != nil {
@@ -55,9 +56,9 @@ func processImageInspectInsightsData(h *Messaging, insights InsightsData, v stri
 			return nil, "", err
 		}
 
-		return []interface{}{facts}, source, nil
+		return facts, source, nil
 	}
-	return []interface{}{}, "", nil
+	return nil, "", nil
 }
 
 func processFactsFromImageInspect(imageInspectData ImageData, id int, source string) ([]LagoonFact, error) {
