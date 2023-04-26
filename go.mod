@@ -1,6 +1,6 @@
 module github.com/uselagoon/lagoon/services/insights-handler
 
-go 1.17
+go 1.18
 
 require (
 	github.com/Khan/genqlient v0.3.0
