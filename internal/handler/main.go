@@ -400,7 +400,10 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 					for _, r := range result {
 						if fact, ok := r.(LagoonFact); ok {
 							// Handle single fact
-							h.sendFactsToLagoonAPI([]LagoonFact{fact}, apiClient, resource, source)
+							err = h.sendFactsToLagoonAPI([]LagoonFact{fact}, apiClient, resource, source)
+							if err != nil {
+								fmt.Println(err)
+							}
 						} else if facts, ok := r.([]LagoonFact); ok {
 							// Handle slice of facts
 							h.sendFactsToLagoonAPI(facts, apiClient, resource, source)

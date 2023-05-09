@@ -2,8 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"github.com/Khan/genqlient/graphql"
-	"github.com/cheshir/go-mq"
 	"io"
 	"io/ioutil"
 	"log"
@@ -11,6 +9,9 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"testing"
+
+	"github.com/Khan/genqlient/graphql"
+	"github.com/cheshir/go-mq"
 )
 
 func Test_processFactsFromJSON(t *testing.T) {
@@ -144,7 +145,7 @@ func Test_processFactsInsightsData(t *testing.T) {
 	var tests = []struct {
 		name    string
 		args    args
-		want    []interface{}
+		want    []LagoonFact
 		want1   string
 		wantErr bool
 	}{
@@ -164,8 +165,8 @@ func Test_processFactsInsightsData(t *testing.T) {
 					Service: "cli",
 				},
 			},
-			want: []interface{}{
-				LagoonFact{
+			want: []LagoonFact{
+				{
 					Environment: 18,
 					Name:        "drupal-core",
 					Value:       "9.0.1",

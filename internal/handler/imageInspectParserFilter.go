@@ -3,12 +3,13 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Khan/genqlient/graphql"
 	"log"
 	"strings"
+
+	"github.com/Khan/genqlient/graphql"
 )
 
-//This becomes/implements the ParserFilter interface
+// This becomes/implements the ParserFilter interface
 type ImageData struct {
 	Name          string            `json:"name"`
 	Digest        string            `json:"digest"`
