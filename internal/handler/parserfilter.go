@@ -1,6 +1,8 @@
 package handler
 
-import "github.com/Khan/genqlient/graphql"
+import (
+	"github.com/Khan/genqlient/graphql"
+)
 
 type parserFilter interface {
 	isFilteredOut() bool

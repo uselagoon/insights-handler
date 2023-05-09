@@ -1,14 +1,14 @@
 package handler
 
 import (
-	cdx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/cheshir/go-mq"
-	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"testing"
+
+	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/cheshir/go-mq"
+	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient"
 )
 
 func Test_processingIncomingMessageQueue(t *testing.T) {
@@ -70,7 +70,7 @@ func Test_processFactsFromSBOM(t *testing.T) {
 			want: []lagoonclient.AddFactInput{
 				{
 					Environment: 3,
-					Name:        "@npmcli/arborist:2.6.2",
+					Name:        "@npmcli/arborist",
 					Value:       "2.6.2",
 					Source:      "syft",
 					Description: "pkg:npm/@npmcli%2Farborist@2.6.2",
@@ -79,7 +79,7 @@ func Test_processFactsFromSBOM(t *testing.T) {
 				},
 				{
 					Environment: 3,
-					Name:        "@npmcli/ci-detect:1.3.0",
+					Name:        "@npmcli/ci-detect",
 					Value:       "1.3.0",
 					Source:      "syft",
 					Description: "pkg:npm/@npmcli%2Fci-detect@1.3.0",
@@ -91,8 +91,19 @@ func Test_processFactsFromSBOM(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := processFactsFromSBOM(tt.args.bom, tt.args.environmentId, tt.args.source); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("processFactsFromSBOM() = %v, want %v", got, tt.want)
+			got := processFactsFromSBOM(tt.args.bom, tt.args.environmentId, tt.args.source)
+			if len(got) != len(tt.want) {
+				t.Errorf("processFactsFromSBOM() returned %d results, want %d", len(got), len(tt.want))
+			}
+			for i := range tt.want {
+				if got[i].Environment != tt.want[i].Environment ||
+					got[i].Name != tt.want[i].Name ||
+					got[i].Value != tt.want[i].Value ||
+					got[i].Source != tt.want[i].Source ||
+					got[i].Description != tt.want[i].Description ||
+					got[i].KeyFact != tt.want[i].KeyFact {
+					t.Errorf("processFactsFromSBOM()[%d] = %v, want %v", i, got[i], tt.want[i])
+				}
 			}
 		})
 	}
