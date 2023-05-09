@@ -479,10 +479,37 @@ func (h *Messaging) sendFactsToLagoonAPI(facts []LagoonFact, apiClient graphql.C
 	return nil
 }
 
+<<<<<<< HEAD
+=======
+func (h *Messaging) sendProblemsToLagoonAPI(problems []LagoonProblem, client graphql.Client, resource ResourceDestination, source string) error {
+	project, environment, apiErr := determineResourceFromLagoonAPI(client, resource)
+	if apiErr != nil {
+		return fmt.Errorf("failed to determine resource from Lagoon API: %v", apiErr)
+	}
+
+	apiErr = h.deleteExistingProblemsBySource(client, environment, source, resource.Service, project)
+	if apiErr != nil {
+		return fmt.Errorf("failed to delete existing problems from Lagoon API: %v", apiErr)
+	}
+
+	if len(problems) > 0 {
+		log.Printf("Matched %v number of problems for project:environment '%v:%v' from source '%v'", len(problems), project.Name, environment, source)
+
+		apiErr = h.pushProblemsToLagoonApi(problems, resource)
+		if apiErr != nil {
+			return fmt.Errorf("%s", apiErr.Error())
+		}
+	}
+
+	return nil
+}
+
+>>>>>>> 5b914a4 (Fix failing tests)
 func (h *Messaging) deleteExistingFactsBySource(apiClient graphql.Client, environment lagoonclient.Environment, source string, project lagoonclient.Project) error {
 	// Remove existing facts from source first
 	_, err := lagoonclient.DeleteFactsFromSource(context.TODO(), apiClient, environment.Id, source)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
@@ -698,7 +725,8 @@ func (h *Messaging) pushProblemsToLagoonApi(problems []LagoonProblem, resource R
 	result, err := lagoonclient.AddProblems(context.TODO(), apiClient, processedProblems)
 	fmt.Println(result)
 	if err != nil {
-		fmt.Errorf("%s", err.Error())
+		fmt.Println(err)
+		return fmt.Errorf("%s", err)
 	}
 
 	if h.EnableDebug {
