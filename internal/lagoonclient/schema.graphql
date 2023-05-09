@@ -225,7 +225,6 @@ input AddProblemInput {
   version: String
   fixedVersion: String
   data: String!
-  created: String
 }
 
 input AddProblemsInput {

@@ -68,16 +68,10 @@ type InsightsMessage struct {
 }
 
 type PayloadInput struct {
-<<<<<<< HEAD
-	Project     string       `json:"project,omitempty"`
-	Environment string       `json:"environment,omitempty"`
-	Facts       []LagoonFact `json:"facts,omitempty"`
-=======
 	Project     string          `json:"project,omitempty"`
 	Environment string          `json:"environment,omitempty"`
 	Facts       []LagoonFact    `json:"facts,omitempty"`
 	Problems    []LagoonProblem `json:"problems,omitempty"`
->>>>>>> 781f41c (Adding insightsTrivyVulnerabilityParserFilter)
 }
 
 type InsightsData struct {
@@ -437,10 +431,7 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 					for _, r := range result {
 						if fact, ok := r.(LagoonFact); ok {
 							// Handle single fact
-							err = h.sendFactsToLagoonAPI([]LagoonFact{fact}, apiClient, resource, source)
-							if err != nil {
-								fmt.Println(err)
-							}
+							h.sendFactsToLagoonAPI([]LagoonFact{fact}, apiClient, resource, source)
 						} else if facts, ok := r.([]LagoonFact); ok {
 							// Handle slice of facts
 							h.sendFactsToLagoonAPI(facts, apiClient, resource, source)
@@ -448,6 +439,28 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 							// Unexpected type returned from filter()
 							log.Printf("unexpected type returned from filter(): %T\n", r)
 						}
+					}
+				}
+
+				if insights.LagoonType == Problems {
+					json, err := json.Marshal(p)
+					if err != nil {
+						log.Println(fmt.Errorf(err.Error()))
+					}
+
+					result, source, err = filter(h, insights, string(json), apiClient, resource)
+					if err != nil {
+						log.Println(fmt.Errorf(err.Error()))
+					}
+
+					var problems []LagoonProblem
+					for _, item := range result {
+						problem, _ := item.(LagoonProblem)
+						problems = append(problems, problem)
+					}
+
+					if len(problems) > 0 {
+						h.sendProblemsToLagoonAPI(problems, apiClient, resource, source)
 					}
 				}
 			}
@@ -479,8 +492,6 @@ func (h *Messaging) sendFactsToLagoonAPI(facts []LagoonFact, apiClient graphql.C
 	return nil
 }
 
-<<<<<<< HEAD
-=======
 func (h *Messaging) sendProblemsToLagoonAPI(problems []LagoonProblem, client graphql.Client, resource ResourceDestination, source string) error {
 	project, environment, apiErr := determineResourceFromLagoonAPI(client, resource)
 	if apiErr != nil {
@@ -504,7 +515,6 @@ func (h *Messaging) sendProblemsToLagoonAPI(problems []LagoonProblem, client gra
 	return nil
 }
 
->>>>>>> 5b914a4 (Fix failing tests)
 func (h *Messaging) deleteExistingFactsBySource(apiClient graphql.Client, environment lagoonclient.Environment, source string, project lagoonclient.Project) error {
 	// Remove existing facts from source first
 	_, err := lagoonclient.DeleteFactsFromSource(context.TODO(), apiClient, environment.Id, source)

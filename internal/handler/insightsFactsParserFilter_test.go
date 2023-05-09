@@ -167,7 +167,7 @@ func Test_processFactsInsightsData(t *testing.T) {
 			},
 			want: []LagoonFact{
 				{
-					Environment: 18,
+					Environment: 3,
 					Name:        "drupal-core",
 					Value:       "9.0.1",
 					Source:      "insights:facts:cli",
