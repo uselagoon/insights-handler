@@ -34,6 +34,7 @@ type AddProblemInput struct {
 	Version           string                `json:"version"`
 	FixedVersion      string                `json:"fixedVersion"`
 	Data              string                `json:"data"`
+	Created           string                `json:"created"`
 }
 
 type FactType string
