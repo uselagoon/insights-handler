@@ -32,10 +32,10 @@ func ToInterfaceSlice[T any](slice []T) []interface{} {
 
 func RegisterParserFilter[T any](pf ParserFilterFunc[T]) {
 	parserFilters = append(parserFilters, func(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]interface{}, string, error) {
-		facts, source, err := pf(h, insights, v, apiClient, resource)
+		result, source, err := pf(h, insights, v, apiClient, resource)
 		if err != nil {
 			return nil, "", err
 		}
-		return ToInterfaceSlice(facts), source, nil
+		return ToInterfaceSlice(result), source, nil
 	})
 }

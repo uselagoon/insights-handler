@@ -473,7 +473,7 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 func (h *Messaging) sendFactsToLagoonAPI(facts []LagoonFact, apiClient graphql.Client, resource ResourceDestination, source string) error {
 
 	project, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
-	log.Printf("Matched %v number of facts for project:environment '%v:%v' from source '%v'", len(facts), project, environment, source)
+	log.Printf("Matched %v number of facts for project:environment '%v:%v' from source '%v'", len(facts), project.Name, environment, source)
 
 	// Even if we don't find any new facts, we need to delete the existing ones
 	// since these may be the end product of a filter process
@@ -504,7 +504,7 @@ func (h *Messaging) sendProblemsToLagoonAPI(problems []LagoonProblem, client gra
 	}
 
 	if len(problems) > 0 {
-		log.Printf("Matched %v number of problems for project:environment '%v:%v' from source '%v'", len(problems), project, environment, source)
+		log.Printf("Matched %v number of problems for project:environment '%v:%v' from source '%v'", len(problems), project.Name, environment, source)
 
 		apiErr = h.pushProblemsToLagoonApi(problems, resource)
 		if apiErr != nil {
@@ -519,6 +519,7 @@ func (h *Messaging) deleteExistingFactsBySource(apiClient graphql.Client, enviro
 	// Remove existing facts from source first
 	_, err := lagoonclient.DeleteFactsFromSource(context.TODO(), apiClient, environment.Id, source)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
@@ -549,7 +550,7 @@ func determineResourceFromLagoonAPI(apiClient graphql.Client, resource ResourceD
 	// Get project data (we need the project ID to be able to utilise the environmentByName query)
 	project, err := lagoonclient.GetProjectByName(context.TODO(), apiClient, resource.Project)
 	if err != nil {
-		return lagoonclient.Project{}, lagoonclient.Environment{}, err
+		return lagoonclient.Project{}, lagoonclient.Environment{}, fmt.Errorf("error: unable to determine resource destination (does %s:%s exist?)", resource.Project, resource.Environment)
 	}
 
 	if project.Id == 0 || project.Name == "" {
@@ -734,7 +735,8 @@ func (h *Messaging) pushProblemsToLagoonApi(problems []LagoonProblem, resource R
 	result, err := lagoonclient.AddProblems(context.TODO(), apiClient, processedProblems)
 	fmt.Println(result)
 	if err != nil {
-		fmt.Errorf("%s", err.Error())
+		fmt.Println(err)
+		return fmt.Errorf("%s", err)
 	}
 
 	if h.EnableDebug {
