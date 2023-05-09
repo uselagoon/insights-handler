@@ -68,9 +68,16 @@ type InsightsMessage struct {
 }
 
 type PayloadInput struct {
+<<<<<<< HEAD
 	Project     string       `json:"project,omitempty"`
 	Environment string       `json:"environment,omitempty"`
 	Facts       []LagoonFact `json:"facts,omitempty"`
+=======
+	Project     string          `json:"project,omitempty"`
+	Environment string          `json:"environment,omitempty"`
+	Facts       []LagoonFact    `json:"facts,omitempty"`
+	Problems    []LagoonProblem `json:"problems,omitempty"`
+>>>>>>> 781f41c (Adding insightsTrivyVulnerabilityParserFilter)
 }
 
 type InsightsData struct {
@@ -98,10 +105,36 @@ type LagoonFact struct {
 	Category    string `json:"category"`
 }
 
+type LagoonProblem struct {
+	Id                int     `json:"id"`
+	Environment       int     `json:"environment"`
+	Identifier        string  `json:"identifier"`
+	Version           string  `json:"version,omitempty"`
+	FixedVersion      string  `json:"fixedVersion,omitempty"`
+	Source            string  `json:"source,omitempty"`
+	Service           string  `json:"service,omitempty"`
+	Data              string  `json:"data"`
+	Severity          string  `json:"severity,omitempty"`
+	SeverityScore     float64 `json:"severityScore,omitempty"`
+	AssociatedPackage string  `json:"associatedPackage,omitempty"`
+	Description       string  `json:"description,omitempty"`
+	Links             string  `json:"links,omitempty"`
+}
+
 const (
 	FactTypeText   string = "TEXT"
 	FactTypeUrl    string = "URL"
 	FactTypeSemver string = "SEMVER"
+)
+
+const (
+	ProblemSeverityRatingNone       string = "NONE"
+	ProblemSeverityRatingUnknown    string = "UNKNOWN"
+	ProblemSeverityRatingNegligible string = "NEGLIGIBLE"
+	ProblemSeverityRatingLow        string = "LOW"
+	ProblemSeverityRatingMedium     string = "MEDIUM"
+	ProblemSeverityRatingHigh       string = "HIGH"
+	ProblemSeverityRatingCritical   string = "CRITICAL"
 )
 
 type InsightType int64
@@ -297,6 +330,10 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 				if incoming.Labels["lagoon.sh/insightsType"] == "image-gz" {
 					insights.LagoonType = ImageFacts
 				}
+				if incoming.Labels["lagoon.sh/insightsType"] == "trivy-vuln-report" {
+					insights.LagoonType = Problems
+				}
+
 				if label == "lagoon.sh/insightsOutputCompressed" {
 					compressed, _ := strconv.ParseBool(incoming.Labels["lagoon.sh/insightsOutputCompressed"])
 					insights.OutputCompressed = compressed
@@ -455,6 +492,18 @@ func (h *Messaging) deleteExistingFactsBySource(apiClient graphql.Client, enviro
 	return nil
 }
 
+func (h *Messaging) deleteExistingProblemsBySource(apiClient graphql.Client, environment lagoonclient.Environment, source string, service string, project lagoonclient.Project) error {
+	_, err := lagoonclient.DeleteProblemsFromSource(context.TODO(), apiClient, environment.Id, source, service)
+	if err != nil {
+		return err
+	}
+
+	log.Println("--------------------")
+	log.Printf("Previous problems deleted for '%s:%s' service '%s', and source '%s'", project.Name, environment.Name, service, source)
+	log.Println("--------------------")
+	return nil
+}
+
 func (h *Messaging) getApiClient() graphql.Client {
 	apiClient := graphql.NewClient(h.LagoonAPI.Endpoint, &http.Client{Transport: &authedTransport{wrapped: http.DefaultTransport, h: h}})
 	return apiClient
@@ -605,6 +654,7 @@ func (h *Messaging) pushFactsToLagoonApi(facts []LagoonFact, resource ResourceDe
 	}
 
 	result, err := lagoonclient.AddFacts(context.TODO(), apiClient, processedFacts)
+	fmt.Println(result)
 	if err != nil {
 		return err
 	}
@@ -612,6 +662,48 @@ func (h *Messaging) pushFactsToLagoonApi(facts []LagoonFact, resource ResourceDe
 	if h.EnableDebug {
 		for _, fact := range facts {
 			log.Println("[DEBUG]...", fact.Name, ":", fact.Value)
+		}
+	}
+
+	log.Println(result)
+	return nil
+}
+
+func (h *Messaging) pushProblemsToLagoonApi(problems []LagoonProblem, resource ResourceDestination) error {
+	apiClient := graphql.NewClient(h.LagoonAPI.Endpoint, &http.Client{Transport: &authedTransport{wrapped: http.DefaultTransport, h: h}})
+
+	log.Println("--------------------")
+	log.Printf("Attempting to add %d problems...", len(problems))
+	log.Println("--------------------")
+
+	processedProblems := make([]lagoonclient.AddProblemInput, len(problems))
+	for i, problem := range problems {
+		processedProblems[i] = lagoonclient.AddProblemInput{
+			Id:                problem.Id,
+			Environment:       problem.Environment,
+			Identifier:        problem.Identifier,
+			Version:           problem.Version,
+			FixedVersion:      problem.FixedVersion,
+			Source:            problem.Source,
+			Service:           problem.Service,
+			Data:              problem.Data,
+			Severity:          lagoonclient.ProblemSeverityRating(problem.Severity),
+			SeverityScore:     problem.SeverityScore,
+			AssociatedPackage: problem.AssociatedPackage,
+			Description:       problem.Description,
+			Links:             problem.Links,
+		}
+	}
+
+	result, err := lagoonclient.AddProblems(context.TODO(), apiClient, processedProblems)
+	fmt.Println(result)
+	if err != nil {
+		fmt.Errorf("%s", err.Error())
+	}
+
+	if h.EnableDebug {
+		for _, problem := range problems {
+			log.Println("[DEBUG]...", problem.Identifier)
 		}
 	}
 
