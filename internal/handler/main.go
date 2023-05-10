@@ -136,6 +136,7 @@ type InsightType int64
 const (
 	Raw = iota
 	Sbom
+	SbomToGrype
 	Image
 )
 
@@ -145,6 +146,8 @@ func (i InsightType) String() string {
 		return "RAW"
 	case Sbom:
 		return "SBOM"
+	case SbomToGrype:
+		return "SBOM_TO_GRYPE"
 	case Image:
 		return "IMAGE"
 	}
@@ -327,6 +330,9 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 				if incoming.Labels["lagoon.sh/insightsType"] == "trivy-vuln-report" {
 					insights.LagoonType = Problems
 				}
+				if incoming.Labels["lagoon.sh/insightsType"] == "sbom-to-grype" {
+					insights.LagoonType = Problems
+				}
 
 				if label == "lagoon.sh/insightsOutputCompressed" {
 					compressed, _ := strconv.ParseBool(incoming.Labels["lagoon.sh/insightsOutputCompressed"])
@@ -346,6 +352,8 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 			switch insights.InputType {
 			case "sbom", "sbom-gz":
 				insights.InsightsType = Sbom
+			case "sbom-to-grype":
+				insights.InsightsType = SbomToGrype
 			case "image", "image-gz":
 				insights.InsightsType = Image
 			default:
@@ -385,8 +393,11 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 
 		// Process Lagoon API integration
 		if !h.LagoonAPI.Disabled {
-			if insights.InsightsType != Sbom && insights.InsightsType != Image && insights.InsightsType != Raw {
-				log.Println("only 'sbom', 'raw', and 'image' types are currently supported for api processing")
+			if insights.InsightsType != Sbom &&
+				insights.InsightsType != Image &&
+				insights.InsightsType != Raw &&
+				insights.InsightsType != SbomToGrype {
+				log.Println("only 'sbom', 'sbom to grype', 'raw', and 'image' types are currently supported for api processing")
 			} else {
 				err := h.sendToLagoonAPI(incoming, resource, insights)
 				if err != nil {
