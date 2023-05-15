@@ -68,10 +68,11 @@ type InsightsMessage struct {
 }
 
 type PayloadInput struct {
-	Project     string          `json:"project,omitempty"`
-	Environment string          `json:"environment,omitempty"`
-	Facts       []LagoonFact    `json:"facts,omitempty"`
-	Problems    []LagoonProblem `json:"problems,omitempty"`
+	Project     string                 `json:"project,omitempty"`
+	Environment string                 `json:"environment,omitempty"`
+	Facts       []LagoonFact           `json:"facts,omitempty"`
+	Problems    []LagoonProblem        `json:"problems,omitempty"`
+	Data        map[string]interface{} `json:"data,omitempty"`
 }
 
 type InsightsData struct {
@@ -137,12 +138,15 @@ const (
 	Raw = iota
 	Sbom
 	Image
+	Direct
 )
 
 func (i InsightType) String() string {
 	switch i {
 	case Raw:
 		return "RAW"
+	case Direct:
+		return "DIRECT"
 	case Sbom:
 		return "SBOM"
 	case Image:
@@ -324,6 +328,9 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 				if incoming.Labels["lagoon.sh/insightsType"] == "image-gz" {
 					insights.LagoonType = ImageFacts
 				}
+				if incoming.Labels["lagoon.sh/insightsType"] == "direct" {
+					insights.LagoonType = Problems
+				}
 				if incoming.Labels["lagoon.sh/insightsType"] == "trivy-vuln-report" {
 					insights.LagoonType = Problems
 				}
@@ -348,6 +355,8 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 				insights.InsightsType = Sbom
 			case "image", "image-gz":
 				insights.InsightsType = Image
+			case "direct":
+				insights.InsightsType = Direct
 			default:
 				insights.InsightsType = Raw
 			}
@@ -377,16 +386,18 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 
 		// Process s3 upload
 		if !h.S3Config.Disabled {
-			err := h.sendToLagoonS3(incoming, insights, resource)
-			if err != nil {
-				log.Printf("Unable to send to S3: %s", err.Error())
+			if insights.InsightsType != Direct {
+				err := h.sendToLagoonS3(incoming, insights, resource)
+				if err != nil {
+					log.Printf("Unable to send to S3: %s", err.Error())
+				}
 			}
 		}
 
 		// Process Lagoon API integration
 		if !h.LagoonAPI.Disabled {
-			if insights.InsightsType != Sbom && insights.InsightsType != Image && insights.InsightsType != Raw {
-				log.Println("only 'sbom', 'raw', and 'image' types are currently supported for api processing")
+			if insights.InsightsType != Sbom && insights.InsightsType != Image && insights.InsightsType != Raw && insights.InsightsType != Direct {
+				log.Println("only 'sbom', 'direct', 'raw', and 'image' types are currently supported for api processing")
 			} else {
 				err := h.sendToLagoonAPI(incoming, resource, insights)
 				if err != nil {
@@ -410,7 +421,6 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 	if resource.Project == "" && resource.Environment == "" {
 		log.Println("no resource definition labels could be found in payload (i.e. lagoon.sh/project or lagoon.sh/environment)")
 	}
-
 	if insights.InputPayload == Payload {
 		for _, p := range incoming.Payload {
 			for _, filter := range parserFilters {
@@ -452,13 +462,11 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 					if err != nil {
 						log.Println(fmt.Errorf(err.Error()))
 					}
-
 					var problems []LagoonProblem
-					for _, item := range result {
-						problem, _ := item.(LagoonProblem)
-						problems = append(problems, problem)
-					}
 
+					for _, r := range result {
+						problems = append(problems, r.(LagoonProblem))
+					}
 					if len(problems) > 0 {
 						h.sendProblemsToLagoonAPI(problems, apiClient, resource, source)
 					}
@@ -473,7 +481,7 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 func (h *Messaging) sendFactsToLagoonAPI(facts []LagoonFact, apiClient graphql.Client, resource ResourceDestination, source string) error {
 
 	project, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
-	log.Printf("Matched %v number of facts for project:environment '%v:%v' from source '%v'", len(facts), project.Name, environment, source)
+	log.Printf("Matched %v facts for '%v:%v' from source '%v'", len(facts), project.Name, environment, source)
 
 	// Even if we don't find any new facts, we need to delete the existing ones
 	// since these may be the end product of a filter process
@@ -504,7 +512,7 @@ func (h *Messaging) sendProblemsToLagoonAPI(problems []LagoonProblem, client gra
 	}
 
 	if len(problems) > 0 {
-		log.Printf("Matched %v number of problems for project:environment '%v:%v' from source '%v'", len(problems), project.Name, environment, source)
+		log.Printf("Matched %v problems for '%v:%v' from source '%v'", len(problems), project.Name, environment, source)
 
 		apiErr = h.pushProblemsToLagoonApi(problems, resource)
 		if apiErr != nil {

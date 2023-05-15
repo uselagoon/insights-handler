@@ -1,0 +1,44 @@
+{
+  "payload": [{
+    "data":{
+        "problem_one": {
+            "environment": 3,
+            "identifier": "CVE-2020-8911",
+            "associatedPackage": "github.com/aws/aws-sdk-go",
+            "version": "v1.34.21",
+            "fixedVersion": "v1.34.22",
+            "source": "insights:problems:direct",
+            "service": "go",
+            "data": "{}",
+            "severity": "MEDIUM",
+            "description": "aws/aws-sdk-go: CBC padding oracle issue in AWS S3 Crypto SDK for golang",
+            "links": "https://avd.aquasec.com/nvd/cve-2020-8911",
+            "severityScore": 0.56
+        },
+        "problem_two": {
+            "environment": 3,
+            "identifier": "CVE-2020-8912",
+            "associatedPackage": "github.com/aws/aws-sdk-go",
+            "version": "v1.44.21",
+            "fixedVersion": "v1.44.22",
+            "source": "insights:problems:direct",
+            "service": "go",
+            "data": "{}",
+            "severity": "LOW",
+            "description": "aws-sdk-go: In-band key negotiation issue in AWS S3 Crypto SDK for golang",
+            "links": "https://avd.aquasec.com/nvd/cve-2020-8912",
+            "severityScore": 0.25
+        }
+    }
+  }],
+  "binaryPayload": {},
+  "annotations": {},
+  "labels": {
+    "lagoon.sh/project": "high-cotton",
+    "lagoon.sh/environment": "Master",
+    "lagoon.sh/service": "go",
+    "lagoon.sh/insightsType": "direct",
+    "lagoon.sh/insightsOutputFileMIMEType": "application/json",
+    "lagoon.sh/insightsOutputFileExt": "json"
+  }
+}

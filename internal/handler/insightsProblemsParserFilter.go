@@ -14,7 +14,13 @@ type ProblemsPayload struct {
 	Problems []LagoonProblem `json:"problems,omitempty"`
 }
 
+type DirectProblemsInsightsData struct {
+	Data map[string]LagoonProblem `json:"data,omitempty"`
+}
+
 func processProblemsInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonProblem, string, error) {
+	source := fmt.Sprintf("insights:problems:%s", insights.InputType)
+
 	if insights.LagoonType == Problems && insights.InsightsType == Raw {
 		r := strings.NewReader(v)
 
@@ -23,11 +29,29 @@ func processProblemsInsightsData(h *Messaging, insights InsightsData, v string, 
 			fmt.Println("err: ", err)
 		}
 
-		source := fmt.Sprintf("insights:problems:%s", insights.InputType)
-
 		problems := processProblemsFromJSON(res, source)
 		if len(problems) == 0 {
 			return nil, "", fmt.Errorf("no problems to process")
+		}
+
+		log.Printf("Successfully processed problems")
+		log.Printf("- problems found: %d\n", len(problems))
+
+		return problems, source, nil
+	}
+
+	if insights.InsightsType == Direct {
+
+		data := DirectProblemsInsightsData{}
+		err := json.Unmarshal([]byte(v), &data)
+		if err != nil {
+			fmt.Println("err: ", err)
+			return nil, "", err
+		}
+
+		problems := []LagoonProblem{}
+		for _, problem := range data.Data {
+			problems = append(problems, problem)
 		}
 
 		log.Printf("Successfully processed problems")
