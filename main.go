@@ -9,7 +9,13 @@ import (
 	"time"
 
 	"github.com/cheshir/go-mq"
+	"github.com/gin-gonic/gin"
+	_ "github.com/lib/pq"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/handler"
+
+	"github.com/uselagoon/lagoon/services/insights-handler/internal/api/config"
+	db "github.com/uselagoon/lagoon/services/insights-handler/internal/api/database"
+	routes "github.com/uselagoon/lagoon/services/insights-handler/internal/api/routes"
 )
 
 var (
@@ -65,6 +71,7 @@ func main() {
 	flag.StringVar(&s3Bucket, "s3-bucket", "lagoon-insights", "The s3 bucket name.")
 	flag.StringVar(&s3Region, "s3-region", "", "The s3 region.")
 	flag.BoolVar(&s3useSSL, "s3-usessl", true, "Use SSL with S3")
+
 	flag.StringVar(&filterTransformerFile, "filter-transformer-file", "./default_filter_transformers.json", "The filter/transformers to load.")
 	flag.BoolVar(&disableS3Upload, "disable-s3-upload", false, "Disable uploading insights data to an s3 s3Bucket")
 	flag.BoolVar(&disableAPIIntegration, "disable-api-integration", false, "Disable insights data integration for the Lagoon API")
@@ -91,6 +98,58 @@ func main() {
 	filterTransformerFile = getEnv("FILTER_TRANSFORMER_FILE", filterTransformerFile)
 	s3useSSL = getEnvBool("S3_USESSL", s3useSSL)
 
+	if len(os.Args) < 2 {
+		log.Fatal("Invalid argument. Supported arguments are 'handler' and 'server'")
+	}
+
+	arg := os.Args[1]
+
+	// seperate handler and server via cli args
+	command := arg
+	switch command {
+	case "handler":
+		startHandler()
+	case "server":
+		startServer()
+	default:
+		log.Fatal("Invalid argument. Supported arguments are 'handler' and 'server'")
+	}
+
+	// wait indefinitely to keep the application running
+	select {}
+}
+
+func startServer() {
+	// setup REST api
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+
+	// initialise Gin router
+	router := gin.Default()
+
+	// establish db connection
+	db, err := db.NewDBConnection(cfg)
+	if err != nil {
+		log.Fatalf("Failed to connect to the database: %v", err)
+	}
+
+	// register routes
+	routes.RegisterRoutes(router, db)
+
+	// start the server in a separate goroutine
+	addr := fmt.Sprintf(":%s", fmt.Sprint(cfg.ServerPort))
+	go func() {
+		fmt.Printf("Server listening on %s\n", addr)
+		err := router.Run(addr)
+		if err != nil {
+			log.Fatalf("Failed to start server: %v", err)
+		}
+	}()
+}
+
+func startHandler() {
 	// configure the backup handler settings
 	broker := handler.RabbitBroker{
 		Hostname:     fmt.Sprintf("%s:%s", mqHost, mqPort),
@@ -175,8 +234,8 @@ func main() {
 		enableDebug,
 	)
 
-	// start the consumer
-	messaging.Consumer()
+	// start the consumer in a separate goroutine
+	go messaging.Consumer()
 }
 
 func getEnv(key, fallback string) string {
