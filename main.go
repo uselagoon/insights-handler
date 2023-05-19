@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/handler"
+	"github.com/uselagoon/lagoon/services/insights-handler/migrations"
 
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/api/config"
 	db "github.com/uselagoon/lagoon/services/insights-handler/internal/api/database"
@@ -109,14 +110,30 @@ func main() {
 	switch command {
 	case "handler":
 		startHandler()
+		// wait indefinitely to keep the application running
+		select {}
 	case "server":
 		startServer()
+		// wait indefinitely to keep the application running
+		select {}
+	case "migrate":
+		err := migrations.RunMigrations()
+		if err != nil {
+			log.Fatalf("Failed to run migrations: %v", err)
+		}
+
+		fmt.Println("Migrations executed successfully")
+	case "seed":
+		err := migrations.RunSeed()
+		if err != nil {
+			log.Fatalf("Failed to run seeds: %v", err)
+		}
+
+		fmt.Println("Seeds executed successfully")
 	default:
 		log.Fatal("Invalid argument. Supported arguments are 'handler' and 'server'")
 	}
 
-	// wait indefinitely to keep the application running
-	select {}
 }
 
 func startServer() {
