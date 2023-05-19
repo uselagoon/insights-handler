@@ -1,0 +1,49 @@
+version: '3'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 8888:8888
+    command: server
+    depends_on:
+      - db
+
+  handler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: >
+      handler
+      -rabbitmq-hostname==host.docker.internal
+      -rabbitmq-username=guest
+      -rabbitmq-password=guest
+      -lagoon-api-host=http://host.docker.internal:3000/graphql
+      --jwt-token-signing-key=super-secret-string
+      --access-key-id=minio
+      --secret-access-key=minio123
+
+  db:
+    image: uselagoon/postgres-15
+    labels:
+      lagoon.type: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: example
+      POSTGRES_DB: postgres
+    ports:
+      - 5432:5432
+    volumes:
+      - db:/var/lib/postgresql/data
+
+  # broker:
+  #   image: uselagoon/broker-single
+  #   ports:
+  #     - '15672:15672'
+  #     - '5672:5672'
+
+volumes:
+  db:
+    {}
