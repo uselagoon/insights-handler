@@ -97,6 +97,30 @@ type LagoonFact struct {
 	KeyFact     bool   `json:"keyFact"`
 	Type        string `json:"type"`
 	Category    string `json:"category"`
+	Service     string `json:"service"`
+}
+
+// These two classifications of Facts need to be rationalized
+type DirectFact struct {
+	EnvironmentId   string `json:"environment"`
+	ProjectName     string `json:"projectName"`
+	EnvironmentName string `json:"environmentName"`
+	Name            string `json:"name"`
+	Value           string `json:"value"`
+	Description     string `json:"description"`
+	Type            string `json:"type"`
+	Category        string `json:"category"`
+	Service         string `json:"service"`
+}
+
+type DirectFacts struct {
+	EnvironmentId   int          `json:"environment"`
+	ProjectName     string       `json:"projectName"`
+	EnvironmentName string       `json:"environmentName"`
+	Facts           []DirectFact `json:"facts"`
+	Type            string       `json:"type"`
+	InsightsType    string       `json:"insightsType"`
+	Source          string       `json:"source"`
 }
 
 const (
@@ -264,8 +288,26 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 		var insights InsightsData
 		var resource ResourceDestination
 
+		// set up defer to ack the message after we're done processing
+		defer func(message mq.Message) {
+			// Ack to remove from queue
+			err := message.Ack(false)
+			if err != nil {
+				fmt.Errorf("%s", err.Error())
+			}
+		}(message)
+
 		incoming := &InsightsMessage{}
 		json.Unmarshal(message.Body(), incoming)
+
+		// if we have direct problems or facts, we process them differently - skipping all
+		// the extra processing below.
+		if incoming.Type == "direct" {
+			processItemsDirectly(message, h)
+			return
+		}
+
+		//For all other legacy types, we proceed as normal.
 
 		// Check labels for insights data from message
 		if incoming.Labels != nil {
@@ -373,12 +415,42 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 			}
 		}
 
-		// Ack to remove from queue
-		err := message.Ack(false)
-		if err != nil {
-			fmt.Errorf("%s", err.Error())
+	}
+}
+
+func processItemsDirectly(message mq.Message, h *Messaging) {
+	var directFacts DirectFacts
+	json.Unmarshal(message.Body(), &directFacts)
+	log.Print(directFacts) //TODO: process direct facts here ...
+
+	apiClient := graphql.NewClient(h.LagoonAPI.Endpoint, &http.Client{Transport: &authedTransport{wrapped: http.DefaultTransport, h: h}})
+
+	processedFacts := make([]lagoonclient.AddFactInput, len(directFacts.Facts))
+	for i, fact := range directFacts.Facts {
+		processedFacts[i] = lagoonclient.AddFactInput{
+			Environment: directFacts.EnvironmentId,
+			Name:        fact.Name,
+			Value:       fact.Value,
+			Source:      directFacts.Source,
+			Description: fact.Description,
+			KeyFact:     false,
+			Type:        lagoonclient.FactType(FactTypeText),
+			Category:    fact.Category,
 		}
 	}
+
+	//first we clear out the source ...
+	_, err := lagoonclient.DeleteFactsFromSource(context.TODO(), apiClient, directFacts.EnvironmentId, directFacts.Source)
+	log.Printf("Deleted facts on environment %v for source %v", directFacts.EnvironmentId, directFacts.Source)
+
+	retStuff, err := lagoonclient.AddFacts(context.TODO(), apiClient, processedFacts)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	log.Println(retStuff)
+	return
 }
 
 // Incoming payload may contain facts or problems, so we need to handle these differently
@@ -424,9 +496,6 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 			switch insights.InsightsType {
 			case Sbom:
 				facts, source, err = processSbomInsightsData(h, insights, string(v), apiClient, resource)
-				break
-			case Direct:
-				facts, source, err = processDirectInsightsData(h, insights, string(v), apiClient, resource)
 				break
 			}
 			if err != nil {
