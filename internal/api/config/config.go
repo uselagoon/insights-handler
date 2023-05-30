@@ -1,7 +1,6 @@
 package config
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -18,37 +17,12 @@ type Config struct {
 	LogLevel         string
 }
 
-var (
-	dbUrl  string
-	dbUser string
-	dbPass string
-	dbHost string
-	dbPort string
-)
-
-func LoadConfig() (*Config, error) {
-	flag.StringVar(&dbUrl, "db-url", "", "The path to connect to the PostgreSQL instance.")
-	flag.StringVar(&dbHost, "db-host", "localhost", "The host of the PostgreSQL instance.")
-	flag.StringVar(&dbUser, "db-username", "postgres", "The username of the PostgreSQL instance.")
-	flag.StringVar(&dbPass, "db-password", "example", "The password of the PostgreSQL instance.")
-	flag.StringVar(&dbPort, "db-port", "5432", "The port for the PostgreSQL host.")
-	flag.Parse()
-
-	if dbUrl := os.Getenv("DATABASE_URL"); dbUrl != "" {
-		dbUrl = dbUrl
-	}
-	if dbUser := os.Getenv("DATABASE_USERNAME"); dbUser != "" {
-		dbUser = dbUser
-	}
-	if dbPass := os.Getenv("DATABASE_PASSWORD"); dbPass != "" {
-		dbPass = dbPass
-	}
-	if dbHost := os.Getenv("DATABASE_HOST"); dbHost != "" {
-		dbHost = dbHost
-	}
-	if dbPort := os.Getenv("DATABASE_PORT"); dbPort != "" {
-		dbPort = dbPort
-	}
+func LoadConfig(dbUrl, dbHost, dbUser, dbPass, dbPort string) (*Config, error) {
+	fmt.Println("dbUrl:", dbUrl)
+	fmt.Println("dbHost:", dbHost)
+	fmt.Println("dbUser:", dbUser)
+	fmt.Println("dbPass:", dbPass)
+	fmt.Println("dbPort:", dbPort)
 
 	serverPortStr := os.Getenv("SERVER_PORT")
 	logLevel := os.Getenv("LOG_LEVEL")
@@ -70,11 +44,13 @@ func LoadConfig() (*Config, error) {
 		logLevel = "info"
 	}
 
-	// fmt.Println(dbUrl)
-	// fmt.Println(dbUser)
-	// fmt.Println(dbPass)
-	// fmt.Println(dbHost)
-	// fmt.Println(dbPort)
+	fmt.Println(dbUrl)
+	fmt.Println(dbUser)
+	fmt.Println(dbPass)
+	fmt.Println(dbHost)
+	fmt.Println(dbPort)
+	fmt.Println(serverPortStr)
+	fmt.Println(logLevel)
 
 	serverPort, err := strconv.Atoi(serverPortStr)
 	if err != nil {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	db "github.com/uselagoon/lagoon/services/insights-handler/internal/api/database"
-	"github.com/uselagoon/lagoon/services/insights-handler/internal/api/models"
+	models "github.com/uselagoon/lagoon/services/insights-handler/internal/api/models"
 )
 
 type FactsRequest struct {
@@ -17,33 +17,41 @@ type FactsRequest struct {
 	Data        map[string]string `json:"data,omitempty"`
 }
 
+type ProblemsRequest struct {
+	Project     string           `json:"project,omitempty"`
+	Environment string           `json:"environment,omitempty"`
+	Problems    []models.Problem `json:"problems"`
+}
+
 func RegisterRoutes(router *gin.Engine, db *db.DBConnection) {
 	router.GET("/facts", func(c *gin.Context) {
-		// Handle GET request
+		getFactsHandler(c, db)
 	})
-
 	router.POST("/facts", func(c *gin.Context) {
-		var request FactsRequest
-		err := c.BindJSON(&request)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON payload"})
-			return
-		}
+		createFactsHandler(c, db)
+	})
 
-		err = db.InsertFacts(request.Facts)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to insert facts"})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"message": "Webhook received and processed successfully"})
+	router.GET("/problems", func(c *gin.Context) {
+		getProblemsHandler(c, db)
+	})
+	router.POST("/problems", func(c *gin.Context) {
+		createProblemsHandler(c, db)
 	})
 }
 
-func getFactsHandler(c *gin.Context) {
+func getFactsHandler(c *gin.Context, db *db.DBConnection) {
+	facts, err := db.GetFacts()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to retrieve facts from the database",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, facts)
 }
 
-func createFactsHandler(c *gin.Context) {
+func createFactsHandler(c *gin.Context, db *db.DBConnection) {
 	var request FactsRequest
 	err := c.BindJSON(&request)
 	if err != nil {
@@ -67,11 +75,59 @@ func createFactsHandler(c *gin.Context) {
 		fmt.Println()
 	}
 
-	// access the extracted request data
-	factsData := request.Facts
-	fmt.Println(factsData)
+	err = db.InsertFacts(request.Facts)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to insert facts"})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Webhook received and processed successfully"})
 }
 
-// curl -X POST -H "Content-Type: application/json" -d '{"data": "123"}' http://localhost:8888/facts
+func getProblemsHandler(c *gin.Context, db *db.DBConnection) {
+	problems, err := db.GetProblems()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to retrieve problems from the database",
+		})
+		fmt.Println(err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, problems)
+}
+
+func createProblemsHandler(c *gin.Context, db *db.DBConnection) {
+	var request ProblemsRequest
+
+	err := c.BindJSON(&request)
+	if err != nil {
+		fmt.Println("Error binding JSON:", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON payload"})
+		return
+	}
+
+	log.Println("Received the following problems payload:")
+	fmt.Println("Project:", request.Project)
+	fmt.Println("Environment:", request.Environment)
+	fmt.Println("Problems:")
+	for _, problem := range request.Problems {
+		fmt.Println("  Identifier:", problem.Identifier)
+		fmt.Println("  Value:", problem.Value)
+		fmt.Println("  Environment:", problem.Environment)
+		fmt.Println("  Source:", problem.Source)
+		fmt.Println("  Description:", problem.Description)
+		fmt.Println("  Category:", problem.Category)
+		fmt.Println("  KeyFact:", problem.KeyFact)
+		fmt.Println()
+	}
+
+	err = db.InsertProblems(request.Problems)
+	if err != nil {
+		fmt.Println(err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to insert problems"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Webhook received and processed successfully"})
+}

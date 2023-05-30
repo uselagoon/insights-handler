@@ -14,39 +14,40 @@ import (
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/handler"
 	"github.com/uselagoon/lagoon/services/insights-handler/migrations"
 
-	"github.com/uselagoon/lagoon/services/insights-handler/internal/api/config"
+	config "github.com/uselagoon/lagoon/services/insights-handler/internal/api/config"
 	db "github.com/uselagoon/lagoon/services/insights-handler/internal/api/database"
 	routes "github.com/uselagoon/lagoon/services/insights-handler/internal/api/routes"
 )
 
 var (
-	httpListenPort               = os.Getenv("HTTP_LISTEN_PORT")
-	mqUser                       string
-	mqPass                       string
-	mqHost                       string
-	mqPort                       string
-	mqWorkers                    int
-	rabbitReconnectRetryInterval int
-	startupConnectionAttempts    int
-	startupConnectionInterval    int
-	lagoonAPIHost                string
-	lagoonAppID                  string
-	jwtTokenSigningKey           string
-	jwtAudience                  string
-	insightsQueueName            string
-	insightsExchange             string
-	jwtSubject                   string
-	jwtIssuer                    string
-	s3SecretAccessKey            string
-	s3Origin                     string
-	s3Bucket                     string
-	s3Region                     string
-	s3AccessKeyID                string
-	filterTransformerFile        string
-	s3useSSL                     bool
-	disableS3Upload              bool
-	disableAPIIntegration        bool
-	enableDebug                  bool
+	httpListenPort                        = os.Getenv("HTTP_LISTEN_PORT")
+	mqUser                                string
+	mqPass                                string
+	mqHost                                string
+	mqPort                                string
+	mqWorkers                             int
+	rabbitReconnectRetryInterval          int
+	startupConnectionAttempts             int
+	startupConnectionInterval             int
+	lagoonAPIHost                         string
+	lagoonAppID                           string
+	jwtTokenSigningKey                    string
+	jwtAudience                           string
+	insightsQueueName                     string
+	insightsExchange                      string
+	jwtSubject                            string
+	jwtIssuer                             string
+	s3SecretAccessKey                     string
+	s3Origin                              string
+	s3Bucket                              string
+	s3Region                              string
+	s3AccessKeyID                         string
+	filterTransformerFile                 string
+	s3useSSL                              bool
+	disableS3Upload                       bool
+	disableAPIIntegration                 bool
+	enableDebug                           bool
+	dbUrl, dbHost, dbUser, dbPass, dbPort string
 )
 
 func main() {
@@ -77,7 +78,23 @@ func main() {
 	flag.BoolVar(&disableS3Upload, "disable-s3-upload", false, "Disable uploading insights data to an s3 s3Bucket")
 	flag.BoolVar(&disableAPIIntegration, "disable-api-integration", false, "Disable insights data integration for the Lagoon API")
 	flag.BoolVar(&enableDebug, "debug", false, "Enable debugging output")
+
+	flag.StringVar(&dbUrl, "db-url", dbUrl, "The path to connect to the PostgreSQL instance.")
+	flag.StringVar(&dbHost, "db-host", dbHost, "The host of the PostgreSQL instance.")
+	flag.StringVar(&dbUser, "db-username", dbUser, "The username of the PostgreSQL instance.")
+	flag.StringVar(&dbPass, "db-password", dbPass, "The password of the PostgreSQL instance.")
+	flag.StringVar(&dbPort, "db-port", dbPort, "The port for the PostgreSQL host.")
 	flag.Parse()
+
+	args := flag.Args()
+	if len(args) == 0 {
+		fmt.Println("Usage: main.go flag args [server|handler|migrate]")
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
+
+	// access the non-flag arguments [server|handler|migrate]
+	arg := args[0]
 
 	// get overrides from environment variables
 	mqUser = getEnv("RABBITMQ_USERNAME", mqUser)
@@ -99,11 +116,11 @@ func main() {
 	filterTransformerFile = getEnv("FILTER_TRANSFORMER_FILE", filterTransformerFile)
 	s3useSSL = getEnvBool("S3_USESSL", s3useSSL)
 
-	if len(os.Args) < 2 {
-		log.Fatal("Invalid argument. Supported arguments are 'handler' and 'server'")
-	}
-
-	arg := os.Args[1]
+	dbUrl = getEnv("DATABASE_URL", dbUrl)
+	dbHost = getEnv("DATABASE_HOST", dbHost)
+	dbUser = getEnv("DATABASE_USERNAME", dbUser)
+	dbPass = getEnv("DATABASE_PASSWORD", dbPass)
+	dbPort = getEnv("DATABASE_PORT", dbPort)
 
 	// seperate handler and server via cli args
 	command := arg
@@ -113,7 +130,7 @@ func main() {
 		// wait indefinitely to keep the application running
 		select {}
 	case "server":
-		startServer()
+		startServer(dbUrl, dbHost, dbUser, dbPass, dbPort)
 		// wait indefinitely to keep the application running
 		select {}
 	case "migrate":
@@ -136,13 +153,13 @@ func main() {
 
 }
 
-func startServer() {
+func startServer(dbUrl, dbHost, dbUser, dbPass, dbPort string) {
 	// setup REST api
-	cfg, err := config.LoadConfig()
+	cfg, err := config.LoadConfig(dbUrl, dbHost, dbUser, dbPass, dbPort)
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		fmt.Println("Failed to load config:", err)
+		os.Exit(1)
 	}
-
 	// initialise Gin router
 	router := gin.Default()
 
