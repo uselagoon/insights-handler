@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/CycloneDX/cyclonedx-go"
+	"github.com/Khan/genqlient/graphql"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient"
 	"io"
 	"os/exec"
@@ -11,8 +13,11 @@ import (
 	"time"
 )
 
+const problemSource = "insights-handler-grype"
+
 type sbomQueueItem struct {
 	EnvironmentId int
+	Service       string
 	SBOM          cyclonedx.BOM
 }
 
@@ -20,6 +25,7 @@ type sbomQueue struct {
 	Items         []sbomQueueItem
 	Lock          sync.Mutex
 	GrypeLocation string
+	ApiClient     graphql.Client
 }
 
 var queue = sbomQueue{
@@ -27,13 +33,14 @@ var queue = sbomQueue{
 	Lock:  sync.Mutex{},
 }
 
-func SetUpQueue(grypeLocation string) {
+func SetUpQueue(grypeLocation string, apiClient graphql.Client) {
 	queue.Lock.Lock()
 	defer queue.Lock.Unlock()
 	queue.GrypeLocation = grypeLocation
+	queue.ApiClient = apiClient
 }
 
-func sbomQueuePush(i sbomQueueItem) {
+func SbomQueuePush(i sbomQueueItem) {
 	queue.Lock.Lock()
 	defer queue.Lock.Unlock()
 	queue.Items = append(queue.Items, i)
@@ -54,7 +61,27 @@ func processQueue() {
 	for {
 		i := sbomQueuePop()
 		if i != nil {
-			//executeProcessing(queue.GrypeLocation, i)
+			vulnerabilitiesBom, err := executeProcessing(queue.GrypeLocation, i.SBOM)
+			if err != nil {
+				fmt.Println("Unable to process queue item")
+				fmt.Println(i)
+				fmt.Print(err)
+				continue
+			}
+			problemArray, err := convertBOMToProblemsArray(i.EnvironmentId, problemSource, i.Service, vulnerabilitiesBom)
+			if err != nil {
+				fmt.Println("Unable to convert vulnerabilities list to problems array")
+				fmt.Println(vulnerabilitiesBom)
+				fmt.Print(err)
+				continue
+			}
+			err = writeProblemsArrayToApi(i.EnvironmentId, problemSource, i.Service, problemArray)
+			if err != nil {
+				fmt.Println("Unable to write problemArray to API")
+				fmt.Println(problemArray)
+				fmt.Print(err)
+				continue
+			}
 		} else {
 			time.Sleep(1 * time.Second)
 		}
@@ -94,6 +121,26 @@ func convertBOMToProblemsArray(environment int, source string, service string, b
 		ret = append(ret, p)
 	}
 	return ret, nil
+}
+
+func writeProblemsArrayToApi(environment int, source string, service string, problems []lagoonclient.LagoonProblem) error {
+
+	ret, err := lagoonclient.DeleteProblemsFromSource(context.TODO(), queue.ApiClient, environment, service, source)
+	if err != nil {
+		return err
+	}
+	fmt.Sprintf("Deleted problems from API for %v:%v - response: %v", service, source, ret)
+
+	//now we write the problems themselves
+	data, err := lagoonclient.AddProblems(context.TODO(), queue.ApiClient, problems)
+
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(data)
+
+	return nil
 }
 
 func executeProcessing(grypeLocation string, bom cyclonedx.BOM) (cyclonedx.BOM, error) {

@@ -7,19 +7,19 @@ import (
 )
 
 type LagoonProblem struct {
-	Id                int     `json:"id"`
-	Environment       int     `json:"environment"`
-	Identifier        string  `json:"identifier"`
-	Version           string  `json:"version,omitempty"`
-	FixedVersion      string  `json:"fixedVersion,omitempty"`
-	Source            string  `json:"source,omitempty"`
-	Service           string  `json:"service,omitempty"`
-	Data              string  `json:"data"`
-	Severity          string  `json:"severity,omitempty"`
-	SeverityScore     float64 `json:"severityScore,omitempty"`
-	AssociatedPackage string  `json:"associatedPackage,omitempty"`
-	Description       string  `json:"description,omitempty"`
-	Links             string  `json:"links,omitempty"`
+	Id                int                   `json:"id"`
+	Environment       int                   `json:"environment"`
+	Identifier        string                `json:"identifier"`
+	Version           string                `json:"version,omitempty"`
+	FixedVersion      string                `json:"fixedVersion,omitempty"`
+	Source            string                `json:"source,omitempty"`
+	Service           string                `json:"service,omitempty"`
+	Data              string                `json:"data"`
+	Severity          ProblemSeverityRating `json:"severity,omitempty"`
+	SeverityScore     float64               `json:"severityScore,omitempty"`
+	AssociatedPackage string                `json:"associatedPackage,omitempty"`
+	Description       string                `json:"description,omitempty"`
+	Links             string                `json:"links,omitempty"`
 }
 
 //const (
@@ -32,11 +32,24 @@ type LagoonProblem struct {
 //	ProblemSeverityRatingCritical   string = "CRITICAL"
 //)
 
-func AddProblems(ctx context.Context, client graphql.Client, problems []AddProblemInput) ([]string, error) {
+func AddProblems(ctx context.Context, client graphql.Client, problems []LagoonProblem) ([]string, error) {
 	var respText []string
 
 	for _, problem := range problems {
-		resp, err := addProblem(ctx, client, problem)
+		resp, err := addProblem(ctx, client, AddProblemInput{
+			Environment:       problem.Environment,
+			Severity:          problem.Severity,
+			SeverityScore:     problem.SeverityScore,
+			Identifier:        problem.Identifier,
+			Service:           problem.Service,
+			Source:            problem.Source,
+			AssociatedPackage: problem.AssociatedPackage,
+			Description:       problem.Description,
+			Links:             problem.Links,
+			Version:           problem.Version,
+			FixedVersion:      problem.FixedVersion,
+			Data:              problem.Data,
+		})
 
 		if err != nil {
 			return respText, err
