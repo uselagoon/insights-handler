@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/CycloneDX/cyclonedx-go"
 	"os"
+	"os/exec"
 	"reflect"
 	"testing"
 )
@@ -30,6 +31,13 @@ func Test_executeProcessing(t *testing.T) {
 			},
 		},
 	}
+
+	//Let's ensure that grype is available locally
+	grypePath := "./testassets/bin/grype"
+	if _, err := os.Stat(grypePath); os.IsNotExist(err) {
+		t.Errorf("Grype not found at %v - please run `make gettestgrype`")
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bomText, _ := os.ReadFile(tt.args.bomLocation)
@@ -71,6 +79,7 @@ func Test_convertBOMToProblemsArray(t *testing.T) {
 			numberOfProblems: 191
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bomText, _ := os.ReadFile(tt.args.bomLocation)
