@@ -36,25 +36,23 @@ func AddProblems(ctx context.Context, client graphql.Client, problems []LagoonPr
 	var respText []string
 
 	for _, problem := range problems {
-		resp, err := addProblem(ctx, client, AddProblemInput{
-			Environment:       problem.Environment,
-			Severity:          problem.Severity,
-			SeverityScore:     problem.SeverityScore,
-			Identifier:        problem.Identifier,
-			Service:           problem.Service,
-			Source:            problem.Source,
-			AssociatedPackage: problem.AssociatedPackage,
-			Description:       problem.Description,
-			Links:             problem.Links,
-			Version:           problem.Version,
-			FixedVersion:      problem.FixedVersion,
-			Data:              problem.Data,
-		})
+
+		resp, err := addProblem(ctx,
+			client,
+			problem.Environment,
+			problem.Severity,
+			problem.SeverityScore,
+			problem.Identifier,
+			problem.Service,
+			problem.Source,
+			problem.AssociatedPackage, problem.Description, problem.Links, problem.Version, problem.FixedVersion, problem.Data)
 
 		if err != nil {
-			return respText, err
+			//return respText, err
+			respText = append(respText, fmt.Sprintf("Error adding %v with id in api: %v - %v", problem.Identifier, resp.AddProblem.Id, err))
+		} else {
+			respText = append(respText, fmt.Sprintf("Added %v with id in api: %v", problem.Identifier, resp.AddProblem.Id))
 		}
-		respText = append(respText, fmt.Sprintf("Added %v with id in api: %v", problem.Identifier, resp.AddProblem.Id))
 	}
 
 	return respText, nil

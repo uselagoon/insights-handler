@@ -290,6 +290,10 @@ func (t *authedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
+	//if h.ProblemsFromSBOM { //let's start the queue
+	SetUpQueue(*h, h.GrypeBinaryLocation)
+	go processQueue()
+	//}
 	return func(message mq.Message) {
 		var insights InsightsData
 		var resource ResourceDestination

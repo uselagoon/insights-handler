@@ -20,23 +20,6 @@ type AddFactInput struct {
 	Category    string   `json:"category"`
 }
 
-type AddProblemInput struct {
-	Id                int                   `json:"id"`
-	Environment       int                   `json:"environment"`
-	Severity          ProblemSeverityRating `json:"severity"`
-	SeverityScore     float64               `json:"severityScore"`
-	Identifier        string                `json:"identifier"`
-	Service           string                `json:"service"`
-	Source            string                `json:"source"`
-	AssociatedPackage string                `json:"associatedPackage"`
-	Description       string                `json:"description"`
-	Links             string                `json:"links"`
-	Version           string                `json:"version"`
-	FixedVersion      string                `json:"fixedVersion"`
-	Data              string                `json:"data"`
-	Created           string                `json:"created"`
-}
-
 type FactType string
 
 const (
@@ -64,7 +47,18 @@ type __addFactsInput struct {
 
 // __addProblemInput is used internally by genqlient
 type __addProblemInput struct {
-	Problem AddProblemInput `json:"problem"`
+	Environment       int                   `json:"environment"`
+	Severity          ProblemSeverityRating `json:"severity"`
+	SeverityScore     float64               `json:"severityScore"`
+	Identifier        string                `json:"identifier"`
+	Service           string                `json:"service"`
+	Source            string                `json:"source"`
+	AssociatedPackage string                `json:"associatedPackage"`
+	Description       string                `json:"description"`
+	Links             string                `json:"links"`
+	Verstion          string                `json:"verstion"`
+	FixedVersion      string                `json:"fixedVersion"`
+	Data              string                `json:"data"`
 }
 
 // __deleteFactsFromSourceInput is used internally by genqlient
@@ -318,10 +312,32 @@ mutation deleteFactsFromSource ($environment: Int!, $source: String!) {
 func addProblem(
 	ctx context.Context,
 	client graphql.Client,
-	problem AddProblemInput,
+	environment int,
+	severity ProblemSeverityRating,
+	severityScore float64,
+	identifier string,
+	service string,
+	source string,
+	associatedPackage string,
+	description string,
+	links string,
+	verstion string,
+	fixedVersion string,
+	data string,
 ) (*addProblemResponse, error) {
 	__input := __addProblemInput{
-		Problem: problem,
+		Environment:       environment,
+		Severity:          severity,
+		SeverityScore:     severityScore,
+		Identifier:        identifier,
+		Service:           service,
+		Source:            source,
+		AssociatedPackage: associatedPackage,
+		Description:       description,
+		Links:             links,
+		Verstion:          verstion,
+		FixedVersion:      fixedVersion,
+		Data:              data,
 	}
 	var err error
 
@@ -330,8 +346,8 @@ func addProblem(
 		ctx,
 		"addProblem",
 		`
-mutation addProblem ($problem: AddProblemInput!) {
-	addProblem(input: $problem) {
+mutation addProblem ($environment: Int!, $severity: ProblemSeverityRating, $severityScore: SeverityScore, $identifier: String!, $service: String!, $source: String!, $associatedPackage: String, $description: String, $links: String, $verstion: String, $fixedVersion: String, $data: String!) {
+	addProblem(input: {environment:$environment,severity:$severity,severityScore:$severityScore,identifier:$identifier,service:$service,source:$source,associatedPackage:$associatedPackage,description:$description,links:$links,version:$verstion,fixedVersion:$fixedVersion,data:$data}) {
 		id
 	}
 }

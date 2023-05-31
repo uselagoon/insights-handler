@@ -38,10 +38,35 @@ mutation deleteFactsFromSource($environment: Int!, $source: String!) {
 }
 
 
-mutation addProblem($problem: AddProblemInput!) {
-    addProblem(input: $problem) {
-        id
-    }
+mutation addProblem($environment: Int!,
+                    $severity: ProblemSeverityRating,
+                    $severityScore: SeverityScore,
+                    $identifier: String!,
+                    $service: String!,
+                    $source: String!,
+                    $associatedPackage: String,
+                    $description: String,
+                    $links: String,
+                    $verstion: String,
+                    $fixedVersion: String,
+                    $data: String!,
+                   ) {
+  addProblem(input: {
+    environment: $environment,
+    severity: $severity,
+    severityScore: $severityScore,
+    identifier: $identifier,
+    service: $service,
+    source: $source,
+    associatedPackage: $associatedPackage,
+    description: $description,
+    links: $links,
+    version: $verstion,
+    fixedVersion: $fixedVersion
+    data: $data
+  }){
+    id
+  }
 }
 
 mutation deleteProblemsFromSource($environment: Int!, $source: String!, $service: String!) {

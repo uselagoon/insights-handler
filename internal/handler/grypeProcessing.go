@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/CycloneDX/cyclonedx-go"
-	"github.com/Khan/genqlient/graphql"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient"
 	"io"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 )
@@ -25,7 +25,7 @@ type sbomQueue struct {
 	Items         []sbomQueueItem
 	Lock          sync.Mutex
 	GrypeLocation string
-	ApiClient     graphql.Client
+	Messaging     Messaging
 }
 
 var queue = sbomQueue{
@@ -33,11 +33,11 @@ var queue = sbomQueue{
 	Lock:  sync.Mutex{},
 }
 
-func SetUpQueue(grypeLocation string, apiClient graphql.Client) {
+func SetUpQueue(messageHandler Messaging, grypeLocation string) {
 	queue.Lock.Lock()
 	defer queue.Lock.Unlock()
 	queue.GrypeLocation = grypeLocation
-	queue.ApiClient = apiClient
+	queue.Messaging = messageHandler
 }
 
 func SbomQueuePush(i sbomQueueItem) {
@@ -51,7 +51,7 @@ func sbomQueuePop() *sbomQueueItem {
 		queue.Lock.Lock()
 		defer queue.Lock.Unlock()
 		i := queue.Items[0]
-		queue.Items = append(queue.Items[:1], queue.Items[2:]...)
+		queue.Items = queue.Items[1:]
 		return &i
 	}
 	return nil
@@ -64,21 +64,21 @@ func processQueue() {
 			vulnerabilitiesBom, err := executeProcessing(queue.GrypeLocation, i.SBOM)
 			if err != nil {
 				fmt.Println("Unable to process queue item")
-				fmt.Println(i)
-				fmt.Print(err)
+				//fmt.Println(i)
+				//fmt.Print(err)
 				continue
 			}
 			problemArray, err := convertBOMToProblemsArray(i.EnvironmentId, problemSource, i.Service, vulnerabilitiesBom)
 			if err != nil {
 				fmt.Println("Unable to convert vulnerabilities list to problems array")
-				fmt.Println(vulnerabilitiesBom)
+				//fmt.Println(vulnerabilitiesBom)
 				fmt.Print(err)
 				continue
 			}
 			err = writeProblemsArrayToApi(i.EnvironmentId, problemSource, i.Service, problemArray)
 			if err != nil {
 				fmt.Println("Unable to write problemArray to API")
-				fmt.Println(problemArray)
+				//fmt.Println(problemArray)
 				fmt.Print(err)
 				continue
 			}
@@ -103,7 +103,7 @@ func convertBOMToProblemsArray(environment int, source string, service string, b
 			FixedVersion:      "",
 			Source:            source,
 			Service:           service,
-			Data:              "",
+			Data:              "{}",
 			AssociatedPackage: "",
 			Description:       v.Description,
 			Links:             v.Source.URL,
@@ -113,10 +113,17 @@ func convertBOMToProblemsArray(environment int, source string, service string, b
 		}
 		//here we need to ensure that there are actually vulnerabilities
 		if v.Ratings != nil && len(*v.Ratings) > 0 {
-			//Might make sense to grab the highest?
-			//p.Severity = (*v.Ratings)[0].Severity
 
-			//p.SeverityScore = *(*v.Ratings)[0].Score
+			//TODO: this is gross, fix it.
+			p.Severity = lagoonclient.ProblemSeverityRating(strings.ToUpper(string((*v.Ratings)[0].Severity)))
+
+			sevScore := *(*v.Ratings)[0].Score
+
+			if sevScore > 1 {
+				sevScore = sevScore / 10
+			}
+
+			p.SeverityScore = sevScore //*(*v.Ratings)[0].Score
 		}
 		ret = append(ret, p)
 	}
@@ -125,20 +132,20 @@ func convertBOMToProblemsArray(environment int, source string, service string, b
 
 func writeProblemsArrayToApi(environment int, source string, service string, problems []lagoonclient.LagoonProblem) error {
 
-	ret, err := lagoonclient.DeleteProblemsFromSource(context.TODO(), queue.ApiClient, environment, service, source)
+	ret, err := lagoonclient.DeleteProblemsFromSource(context.TODO(), queue.Messaging.getApiClient(), environment, service, source)
 	if err != nil {
 		return err
 	}
-	fmt.Sprintf("Deleted problems from API for %v:%v - response: %v", service, source, ret)
+	fmt.Printf("Deleted problems from API for %v:%v - response: %v", service, source, ret)
 
 	//now we write the problems themselves
-	data, err := lagoonclient.AddProblems(context.TODO(), queue.ApiClient, problems)
+	_, err = lagoonclient.AddProblems(context.TODO(), queue.Messaging.getApiClient(), problems)
 
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(data)
+	//fmt.Println(data)
 
 	return nil
 }
@@ -202,7 +209,7 @@ func executeProcessing(grypeLocation string, bom cyclonedx.BOM) (cyclonedx.BOM, 
 		output = append(output, buf[:n]...)
 	}
 
-	fmt.Println("Output:", string(output))
+	//fmt.Println("Output:", string(output))
 
 	// Wait for the command to finish
 	if err := cmd.Wait(); err != nil {
