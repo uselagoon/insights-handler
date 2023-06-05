@@ -1,0 +1,27 @@
+{
+  "eventId": "123456789",
+  "eventType": "FactsAddedEvent",
+  "timestamp": "2023-05-30T10:00:00Z",
+  "data": [
+		{
+			"name": "drupal-core",
+			"value": "9.0.1",
+			"environment": 3,
+			"source": "insights:facts:cli",
+			"description": "Drupal CMS version found on environment",
+			"category": "Framework",
+			"keyFact": true,
+			"type": "TEXT"
+		},
+		{
+			"name": "php-version",
+			"value": "8.0.3",
+			"environment": 3,
+			"source": "insights:facts:cli",
+			"description": "PHP version found on environment",
+			"category": "Programming language",
+			"keyFact": false,
+			"type": "TEXT"
+		}
+	]
+}

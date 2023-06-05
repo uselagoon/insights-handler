@@ -116,3 +116,30 @@ func (dbc *DBConnection) InsertProblems(problems []models.Problem) error {
 
 	return nil
 }
+
+func (dbc *DBConnection) GetDeploymentMetrics(project string) (models.DeploymentMetrics, error) {
+	deploymentMetrics := models.DeploymentMetrics{}
+
+	rows, err := dbc.db.Query(`SELECT project, number_of_builds, failed_builds, successful_builds, builds_per_month FROM deployment_metrics WHERE project = $1`, project)
+	if err != nil {
+		return deploymentMetrics, err
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		err := rows.Scan(
+			&deploymentMetrics.Project,
+			&deploymentMetrics.NumberOfBuilds,
+			&deploymentMetrics.FailedBuilds,
+			&deploymentMetrics.SuccessfulBuilds,
+			&deploymentMetrics.BuildsPerMonth,
+		)
+		if err != nil {
+			return deploymentMetrics, err
+		}
+	} else {
+		return deploymentMetrics, fmt.Errorf("no deployment metrics found for the specified project")
+	}
+
+	return deploymentMetrics, nil
+}

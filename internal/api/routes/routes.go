@@ -11,16 +11,24 @@ import (
 )
 
 type FactsRequest struct {
-	Project     string            `json:"project,omitempty"`
-	Environment string            `json:"environment,omitempty"`
+	Project     string            `json:"project"`
+	Environment string            `json:"environment"`
 	Facts       []models.Fact     `json:"facts,omitempty"`
 	Data        map[string]string `json:"data,omitempty"`
 }
 
 type ProblemsRequest struct {
-	Project     string           `json:"project,omitempty"`
-	Environment string           `json:"environment,omitempty"`
+	Project     string           `json:"project"`
+	Environment string           `json:"environment"`
 	Problems    []models.Problem `json:"problems"`
+}
+
+type DeploymentMetricsRequest struct {
+	Project string `json:"project"`
+}
+
+type CreateDeploymentMetricsRequest struct {
+	Project string `json:"project"`
 }
 
 func RegisterRoutes(router *gin.Engine, db *db.DBConnection) {
@@ -36,6 +44,13 @@ func RegisterRoutes(router *gin.Engine, db *db.DBConnection) {
 	})
 	router.POST("/problems", func(c *gin.Context) {
 		createProblemsHandler(c, db)
+	})
+
+	router.GET("/deployments", func(c *gin.Context) {
+		getDeploymentMetricsHandler(c, db)
+	})
+	router.POST("/deployments", func(c *gin.Context) {
+		createDeploymentMetricsHandler(c, db)
 	})
 }
 
@@ -130,4 +145,27 @@ func createProblemsHandler(c *gin.Context, db *db.DBConnection) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Webhook received and processed successfully"})
+}
+
+func getDeploymentMetricsHandler(c *gin.Context, db *db.DBConnection) {
+	var request DeploymentMetricsRequest
+
+	err := c.BindJSON(&request)
+
+	rows, err := db.GetDeploymentMetrics(request.Project)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve deployment metrics"})
+		return
+	}
+	defer rows.Close()
+
+	deploymentMetrics := models.DeploymentMetrics{
+		Project:          request.Project,
+		NumberOfBuilds:   100,
+		FailedBuilds:     20,
+		SuccessfulBuilds: 80,
+		BuildsPerMonth:   25,
+	}
+
+	fmt.Println(deploymentMetrics)
 }
