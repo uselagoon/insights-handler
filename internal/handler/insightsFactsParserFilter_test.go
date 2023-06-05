@@ -14,80 +14,6 @@ import (
 	"github.com/cheshir/go-mq"
 )
 
-func Test_processFactsFromJSON(t *testing.T) {
-	type args struct {
-		facts         []byte
-		environmentId int
-		source        string
-	}
-
-	testResponse, err := ioutil.ReadFile("./testassets/factsPayload.json")
-	if err != nil {
-		t.Fatalf("Could not open file")
-	}
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/" {
-			t.Errorf("Expected to request '/fixedvalue', got: %s", r.URL.Path)
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Write(testResponse)
-	}))
-	defer server.Close()
-
-	resp, err := http.Get(server.URL)
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
-
-	b, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	tests := []struct {
-		name string
-		args args
-		want []LagoonFact
-	}{
-		{
-			name: "Process raw facts from JSON",
-			args: args{
-				b,
-				90266,
-				"drush-pml",
-			},
-			want: []LagoonFact{
-				{
-					Name:        "drupal-core",
-					Value:       "9.0.1",
-					Environment: 90266,
-					Source:      "drush-pml",
-					Description: "Drupal CMS version found on environment",
-					KeyFact:     true,
-					Type:        "TEXT",
-				},
-				{
-					Name:        "php-version",
-					Value:       "8.0.3",
-					Environment: 90266,
-					Source:      "drush-pml",
-					Description: "PHP version found on environment",
-					KeyFact:     false,
-					Type:        "TEXT",
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := processFactsFromJSON(tt.args.facts, tt.args.source); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("processFactsFromJSON() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func Test_processFactsInsightsData(t *testing.T) {
 	type args struct {
 		h         *Messaging
@@ -105,7 +31,7 @@ func Test_processFactsInsightsData(t *testing.T) {
 	}
 	apiClient := h.getApiClient()
 
-	testResponse, err := ioutil.ReadFile("./testassets/testArrayFactsRawPayload.json")
+	testResponse, err := ioutil.ReadFile("./testassets/rawFactsInsightsPayload.json")
 	if err != nil {
 		t.Fatalf("Could not open file")
 	}
@@ -150,7 +76,7 @@ func Test_processFactsInsightsData(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "raw facts payload",
+			name: "raw facts insights payload",
 			args: args{
 				h: &Messaging{},
 				insights: InsightsData{
@@ -167,7 +93,7 @@ func Test_processFactsInsightsData(t *testing.T) {
 			},
 			want: []LagoonFact{
 				{
-					Environment: 18,
+					Environment: 3,
 					Name:        "drupal-core",
 					Value:       "9.0.1",
 					Source:      "insights:facts:cli",

@@ -65,12 +65,35 @@ type InsightsMessage struct {
 	BinaryPayload map[string]string `json:"binaryPayload"`
 	Annotations   map[string]string `json:"annotations"`
 	Labels        map[string]string `json:"labels"`
+	Type          string            `json:"type,omitempty"`
 }
 
 type PayloadInput struct {
 	Project     string       `json:"project,omitempty"`
 	Environment string       `json:"environment,omitempty"`
 	Facts       []LagoonFact `json:"facts,omitempty"`
+}
+
+type DirectFact struct {
+	EnvironmentId   string `json:"environment"`
+	ProjectName     string `json:"projectName"`
+	EnvironmentName string `json:"environmentName"`
+	Name            string `json:"name"`
+	Value           string `json:"value"`
+	Description     string `json:"description"`
+	Type            string `json:"type"`
+	Category        string `json:"category"`
+	Service         string `json:"service"`
+}
+
+type DirectFacts struct {
+	ProjectName     string       `json:"projectName,omitempty"`
+	EnvironmentName string       `json:"environmentName,omitempty"`
+	EnvironmentId   int          `json:"environment,omitempty"`
+	Facts           []DirectFact `json:"facts"`
+	Type            string       `json:"type"`
+	InsightsType    string       `json:"insightsType"`
+	Source          string       `json:"source"`
 }
 
 type InsightsData struct {
@@ -110,6 +133,7 @@ const (
 	Raw = iota
 	Sbom
 	Image
+	Direct
 )
 
 func (i InsightType) String() string {
@@ -120,6 +144,8 @@ func (i InsightType) String() string {
 		return "SBOM"
 	case Image:
 		return "IMAGE"
+	case Direct:
+		return "DIRECT"
 	}
 	return "RAW"
 }
@@ -262,8 +288,24 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 		var insights InsightsData
 		var resource ResourceDestination
 
+		// set up defer to ack the message after we're done processing
+		defer func(message mq.Message) {
+			// Ack to remove from queue
+			err := message.Ack(false)
+			if err != nil {
+				fmt.Errorf("%s", err.Error())
+			}
+		}(message)
+
 		incoming := &InsightsMessage{}
 		json.Unmarshal(message.Body(), incoming)
+
+		// if we have direct problems or facts, we process them differently - skipping all
+		// the extra processing below.
+		if incoming.Type == "direct" {
+			processItemsDirectly(message, h)
+			return
+		}
 
 		// Check labels for insights data from message
 		if incoming.Labels != nil {
@@ -317,6 +359,8 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 				insights.InsightsType = Sbom
 			case "image", "image-gz":
 				insights.InsightsType = Image
+			case "direct":
+				insights.InsightsType = Direct
 			default:
 				insights.InsightsType = Raw
 			}
@@ -346,16 +390,21 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 
 		// Process s3 upload
 		if !h.S3Config.Disabled {
-			err := h.sendToLagoonS3(incoming, insights, resource)
-			if err != nil {
-				log.Printf("Unable to send to S3: %s", err.Error())
+			if insights.InsightsType != Direct {
+				err := h.sendToLagoonS3(incoming, insights, resource)
+				if err != nil {
+					log.Printf("Unable to send to S3: %s", err.Error())
+				}
 			}
 		}
 
 		// Process Lagoon API integration
 		if !h.LagoonAPI.Disabled {
-			if insights.InsightsType != Sbom && insights.InsightsType != Image && insights.InsightsType != Raw {
-				log.Println("only 'sbom', 'raw', and 'image' types are currently supported for api processing")
+			if insights.InsightsType != Sbom &&
+				insights.InsightsType != Image &&
+				insights.InsightsType != Raw &&
+				insights.InsightsType != Direct {
+				log.Println("only 'sbom', 'direct', 'raw', and 'image' types are currently supported for api processing")
 			} else {
 				err := h.sendToLagoonAPI(incoming, resource, insights)
 				if err != nil {
@@ -370,6 +419,44 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 			fmt.Errorf("%s", err.Error())
 		}
 	}
+}
+
+func processItemsDirectly(message mq.Message, h *Messaging) string {
+	var directFacts DirectFacts
+	json.Unmarshal(message.Body(), &directFacts)
+
+	if h.EnableDebug {
+		log.Print("directFacts: ", directFacts)
+	}
+
+	apiClient := graphql.NewClient(h.LagoonAPI.Endpoint, &http.Client{Transport: &authedTransport{wrapped: http.DefaultTransport, h: h}})
+
+	processedFacts := make([]lagoonclient.AddFactInput, len(directFacts.Facts))
+	for i, fact := range directFacts.Facts {
+		processedFacts[i] = lagoonclient.AddFactInput{
+			Environment: directFacts.EnvironmentId,
+			Name:        fact.Name,
+			Value:       fact.Value,
+			Source:      directFacts.Source,
+			Description: fact.Description,
+			KeyFact:     false,
+			Type:        lagoonclient.FactType(FactTypeText),
+			Category:    fact.Category,
+		}
+	}
+
+	_, err := lagoonclient.DeleteFactsFromSource(context.TODO(), apiClient, directFacts.EnvironmentId, directFacts.Source)
+	if err != nil {
+		log.Println(err)
+	}
+	log.Printf("Deleted facts on environment %v for source %v", directFacts.EnvironmentId, directFacts.Source)
+
+	facts, err := lagoonclient.AddFacts(context.TODO(), apiClient, processedFacts)
+	if err != nil {
+		log.Println(err)
+	}
+
+	return facts
 }
 
 // Incoming payload may contain facts or problems, so we need to handle these differently

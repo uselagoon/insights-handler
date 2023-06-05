@@ -1,15 +1,49 @@
 package handler
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"reflect"
 	"testing"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/cheshir/go-mq"
+	"github.com/joho/godotenv"
+	"github.com/stretchr/testify/mock"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient"
 )
+
+type MockMessage struct {
+	mock.Mock
+}
+
+func (m *MockMessage) Ack(multiple bool) error {
+	args := m.Called(multiple)
+	return args.Error(0)
+}
+
+func (m *MockMessage) Nack(multiple, request bool) error {
+	args := m.Called(multiple, request)
+	return args.Error(0)
+}
+
+func (m *MockMessage) Reject(requeue bool) error {
+	args := m.Called(requeue)
+	return args.Error(0)
+}
+
+func (m *MockMessage) Body() []byte {
+	args := m.Called()
+	return args.Get(0).([]byte)
+}
+
+func (m *MockMessage) AppId() string {
+	args := m.Called()
+	return args.String(0)
+}
 
 func Test_processingIncomingMessageQueue(t *testing.T) {
 	type args struct {
@@ -21,6 +55,81 @@ func Test_processingIncomingMessageQueue(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+		})
+	}
+}
+
+func Test_processDirectFacts(t *testing.T) {
+	err := godotenv.Load("../../.env")
+	if err != nil {
+		fmt.Println(err)
+		panic("Error loading .env file")
+
+	}
+
+	tokenSigningKey := os.Getenv("TOKEN_SIGNING_KEY")
+	if tokenSigningKey == "" {
+		fmt.Println("TokenSigningKey not found in environment variables")
+		return
+	}
+
+	h := Messaging{
+		Config: mq.Config{},
+		LagoonAPI: LagoonAPI{
+			Endpoint:        "http://localhost:3000/graphql",
+			TokenSigningKey: tokenSigningKey,
+			JWTAudience:     "api.dev",
+		},
+	}
+	// apiClient := h.getApiClient()
+
+	testResponse, err := ioutil.ReadFile("./testassets/directFactsPayload.json")
+	if err != nil {
+		t.Fatalf("Could not open file: %v", err)
+	}
+
+	type args struct {
+		message mq.Message
+		h       *Messaging
+	}
+
+	var tests = []struct {
+		name    string
+		args    args
+		want    string
+		want1   string
+		wantErr bool
+	}{
+		{
+			name: "direct facts insights payload",
+			args: args{
+				message: &MockMessage{},
+				h:       &h,
+			},
+			want:    "Added 2 facts",
+			want1:   "insights:facts:cli",
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			message := tt.args.message.(*MockMessage)
+
+			// Set up the expected behavior of the mock message's Body and Ack methods
+			message.On("Body").Return(testResponse)
+			message.On("Ack", false).Return(nil)
+
+			fmt.Println(string(message.Body()))
+
+			got := processItemsDirectly(tt.args.message, tt.args.h)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("processItemsDirectly() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("processItemsDirectly() got = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }
