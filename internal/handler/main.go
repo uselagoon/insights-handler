@@ -75,21 +75,21 @@ type PayloadInput struct {
 }
 
 type DirectFact struct {
-	EnvironmentId   string `json:"environment"`
-	ProjectName     string `json:"projectName"`
-	EnvironmentName string `json:"environmentName"`
-	Name            string `json:"name"`
-	Value           string `json:"value"`
-	Description     string `json:"description"`
-	Type            string `json:"type"`
-	Category        string `json:"category"`
-	Service         string `json:"service"`
+	EnvironmentId   json.Number `json:"environment"`
+	ProjectName     string      `json:"projectName"`
+	EnvironmentName string      `json:"environmentName"`
+	Name            string      `json:"name"`
+	Value           string      `json:"value"`
+	Description     string      `json:"description"`
+	Type            string      `json:"type"`
+	Category        string      `json:"category"`
+	Service         string      `json:"service"`
 }
 
 type DirectFacts struct {
 	ProjectName     string       `json:"projectName,omitempty"`
 	EnvironmentName string       `json:"environmentName,omitempty"`
-	EnvironmentId   int          `json:"environment,omitempty"`
+	EnvironmentId   json.Number  `json:"environment,omitempty"`
 	Facts           []DirectFact `json:"facts"`
 	Type            string       `json:"type"`
 	InsightsType    string       `json:"insightsType"`
@@ -424,6 +424,18 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 func processItemsDirectly(message mq.Message, h *Messaging) string {
 	var directFacts DirectFacts
 	json.Unmarshal(message.Body(), &directFacts)
+	err := json.Unmarshal(message.Body(), &directFacts)
+	if err != nil {
+		log.Println("Error unmarshaling JSON:", err)
+		return "exciting, unable to process direct facts"
+	}
+
+	// since its useful to allow int and string json definitions, we need to convert strings here to ints.
+	environmentId, err := strconv.Atoi(directFacts.EnvironmentId.String())
+	if err != nil {
+		log.Println("Error converting EnvironmentId to int:", err)
+		return "exciting, unable to process direct facts"
+	}
 
 	if h.EnableDebug {
 		log.Print("directFacts: ", directFacts)
@@ -434,7 +446,7 @@ func processItemsDirectly(message mq.Message, h *Messaging) string {
 	processedFacts := make([]lagoonclient.AddFactInput, len(directFacts.Facts))
 	for i, fact := range directFacts.Facts {
 		processedFacts[i] = lagoonclient.AddFactInput{
-			Environment: directFacts.EnvironmentId,
+			Environment: environmentId,
 			Name:        fact.Name,
 			Value:       fact.Value,
 			Source:      directFacts.Source,
@@ -445,11 +457,11 @@ func processItemsDirectly(message mq.Message, h *Messaging) string {
 		}
 	}
 
-	_, err := lagoonclient.DeleteFactsFromSource(context.TODO(), apiClient, directFacts.EnvironmentId, directFacts.Source)
+	_, err = lagoonclient.DeleteFactsFromSource(context.TODO(), apiClient, environmentId, directFacts.Source)
 	if err != nil {
 		log.Println(err)
 	}
-	log.Printf("Deleted facts on environment %v for source %v", directFacts.EnvironmentId, directFacts.Source)
+	log.Printf("Deleted facts on environment %v for source %v", environmentId, directFacts.Source)
 
 	facts, err := lagoonclient.AddFacts(context.TODO(), apiClient, processedFacts)
 	if err != nil {
