@@ -303,7 +303,8 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 		// if we have direct problems or facts, we process them differently - skipping all
 		// the extra processing below.
 		if incoming.Type == "direct" {
-			processItemsDirectly(message, h)
+			resp := processItemsDirectly(message, h)
+			log.Println(resp)
 			return
 		}
 
