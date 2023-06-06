@@ -1,0 +1,33 @@
+{
+  "projectName": "high-cotton",
+  "environment": 3,
+  "environmentName": "Master",
+  "facts": [
+    {
+      "projectName": "high-cotton",
+      "environment": 3,
+      "environmentName": "Master",
+      "name": "drupal-core",
+      "value": "9.0.1",
+      "description": "Drupal CMS version found on environment",
+      "type": "TEXT",
+      "category": "Framework",
+      "service": "cli",
+      "keyFact": true
+    },
+    {
+      "projectName": "high-cotton",
+      "environment": 3,
+      "environmentName": "Master",
+      "name": "php-version",
+      "value": "8.0.3",
+      "description": "PHP version found on environment",
+      "type": "TEXT",
+      "category": "Programming language",
+      "service": "cli",
+      "keyFact": false
+    }
+  ],
+  "type": "direct",
+  "source": "insights:facts:cli"
+}
