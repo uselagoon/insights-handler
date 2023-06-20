@@ -28,6 +28,6 @@
       "keyFact": false
     }
   ],
-  "type": "direct",
+  "type": "direct.facts",
   "source": "insights:facts:cli"
 }
