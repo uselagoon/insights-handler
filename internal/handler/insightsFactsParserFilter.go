@@ -38,8 +38,7 @@ func processFactsInsightsData(h *Messaging, insights InsightsData, v string, api
 			return nil, "", fmt.Errorf("no facts to process")
 		}
 
-		log.Printf("Successfully processed facts")
-		log.Printf("- Facts found: %d\n", len(facts))
+		log.Printf("Successfully processed %d fact(s), for '%s:%s', from source '%s'", len(facts), resource.Project, resource.Environment, source)
 
 		return facts, source, nil
 	}
@@ -81,7 +80,9 @@ func processFactsFromJSON(facts []byte, source string) []LagoonFact {
 			KeyFact:     f.KeyFact,
 			Type:        FactTypeText,
 		}
-		fmt.Println("Processing fact name " + f.Name)
+		if EnableDebug {
+			log.Println("[DEBUG] processing fact name " + f.Name)
+		}
 		fact, _ = ProcessLagoonFactAgainstRegisteredFilters(fact, f)
 		factsInput = append(factsInput, fact)
 	}

@@ -3,6 +3,7 @@ package lagoonclient
 import (
 	"context"
 	"fmt"
+
 	"github.com/Khan/genqlient/graphql"
 )
 
@@ -78,7 +79,7 @@ func AddFacts(ctx context.Context, client graphql.Client, facts []AddFactInput) 
 		return "", err
 	}
 
-	return fmt.Sprintf("Added %d facts", len(resp.AddFacts)), nil
+	return fmt.Sprintf("Added %d fact(s)", len(resp.AddFacts)), nil
 }
 
 func DeleteFactsFromSource(ctx context.Context, client graphql.Client, environmentID int, source string) (string, error) {
