@@ -69,9 +69,11 @@ type InsightsMessage struct {
 }
 
 type PayloadInput struct {
-	Project     string       `json:"project,omitempty"`
-	Environment string       `json:"environment,omitempty"`
-	Facts       []LagoonFact `json:"facts,omitempty"`
+	Project     string                 `json:"project,omitempty"`
+	Environment string                 `json:"environment,omitempty"`
+	Facts       []LagoonFact           `json:"facts,omitempty"`
+	Problems    []LagoonProblem        `json:"problems,omitempty"`
+	Data        map[string]interface{} `json:"data,omitempty"`
 }
 
 type DirectFact struct {
@@ -121,10 +123,36 @@ type LagoonFact struct {
 	Category    string `json:"category"`
 }
 
+type LagoonProblem struct {
+	Id                int     `json:"id"`
+	Environment       int     `json:"environment"`
+	Identifier        string  `json:"identifier"`
+	Version           string  `json:"version,omitempty"`
+	FixedVersion      string  `json:"fixedVersion,omitempty"`
+	Source            string  `json:"source,omitempty"`
+	Service           string  `json:"service,omitempty"`
+	Data              string  `json:"data"`
+	Severity          string  `json:"severity,omitempty"`
+	SeverityScore     float64 `json:"severityScore,omitempty"`
+	AssociatedPackage string  `json:"associatedPackage,omitempty"`
+	Description       string  `json:"description,omitempty"`
+	Links             string  `json:"links,omitempty"`
+}
+
 const (
 	FactTypeText   string = "TEXT"
 	FactTypeUrl    string = "URL"
 	FactTypeSemver string = "SEMVER"
+)
+
+const (
+	ProblemSeverityRatingNone       string = "NONE"
+	ProblemSeverityRatingUnknown    string = "UNKNOWN"
+	ProblemSeverityRatingNegligible string = "NEGLIGIBLE"
+	ProblemSeverityRatingLow        string = "LOW"
+	ProblemSeverityRatingMedium     string = "MEDIUM"
+	ProblemSeverityRatingHigh       string = "HIGH"
+	ProblemSeverityRatingCritical   string = "CRITICAL"
 )
 
 type InsightType int64
@@ -140,12 +168,12 @@ func (i InsightType) String() string {
 	switch i {
 	case Raw:
 		return "RAW"
+	case Direct:
+		return "DIRECT"
 	case Sbom:
 		return "SBOM"
 	case Image:
 		return "IMAGE"
-	case Direct:
-		return "DIRECT"
 	}
 	return "RAW"
 }
@@ -340,6 +368,13 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 				if incoming.Labels["lagoon.sh/insightsType"] == "image-gz" {
 					insights.LagoonType = ImageFacts
 				}
+				if incoming.Labels["lagoon.sh/insightsType"] == "direct" {
+					insights.LagoonType = Problems
+				}
+				if incoming.Labels["lagoon.sh/insightsType"] == "trivy-vuln-report" {
+					insights.LagoonType = Problems
+				}
+
 				if label == "lagoon.sh/insightsOutputCompressed" {
 					compressed, _ := strconv.ParseBool(incoming.Labels["lagoon.sh/insightsOutputCompressed"])
 					insights.OutputCompressed = compressed
@@ -401,10 +436,7 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 
 		// Process Lagoon API integration
 		if !h.LagoonAPI.Disabled {
-			if insights.InsightsType != Sbom &&
-				insights.InsightsType != Image &&
-				insights.InsightsType != Raw &&
-				insights.InsightsType != Direct {
+			if insights.InsightsType != Sbom && insights.InsightsType != Image && insights.InsightsType != Raw && insights.InsightsType != Direct {
 				log.Println("only 'sbom', 'direct', 'raw', and 'image' types are currently supported for api processing")
 			} else {
 				err := h.sendToLagoonAPI(incoming, resource, insights)
@@ -479,7 +511,6 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 	if resource.Project == "" && resource.Environment == "" {
 		log.Println("no resource definition labels could be found in payload (i.e. lagoon.sh/project or lagoon.sh/environment)")
 	}
-
 	if insights.InputPayload == Payload {
 		for _, p := range incoming.Payload {
 			for _, filter := range parserFilters {
@@ -500,10 +531,7 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 					for _, r := range result {
 						if fact, ok := r.(LagoonFact); ok {
 							// Handle single fact
-							err = h.sendFactsToLagoonAPI([]LagoonFact{fact}, apiClient, resource, source)
-							if err != nil {
-								fmt.Println(err)
-							}
+							h.sendFactsToLagoonAPI([]LagoonFact{fact}, apiClient, resource, source)
 						} else if facts, ok := r.([]LagoonFact); ok {
 							// Handle slice of facts
 							h.sendFactsToLagoonAPI(facts, apiClient, resource, source)
@@ -511,6 +539,26 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 							// Unexpected type returned from filter()
 							log.Printf("unexpected type returned from filter(): %T\n", r)
 						}
+					}
+				}
+
+				if insights.LagoonType == Problems {
+					json, err := json.Marshal(p)
+					if err != nil {
+						log.Println(fmt.Errorf(err.Error()))
+					}
+
+					result, source, err = filter(h, insights, string(json), apiClient, resource)
+					if err != nil {
+						log.Println(fmt.Errorf(err.Error()))
+					}
+					var problems []LagoonProblem
+
+					for _, r := range result {
+						problems = append(problems, r.(LagoonProblem))
+					}
+					if len(problems) > 0 {
+						h.sendProblemsToLagoonAPI(problems, apiClient, resource, source)
 					}
 				}
 			}
@@ -523,7 +571,7 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 func (h *Messaging) sendFactsToLagoonAPI(facts []LagoonFact, apiClient graphql.Client, resource ResourceDestination, source string) error {
 
 	project, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
-	log.Printf("Matched %v number of facts for project:environment '%v:%v' from source '%v'", len(facts), project.Name, environment, source)
+	log.Printf("Matched %v facts for '%v:%v' from source '%v'", len(facts), project.Name, environment, source)
 
 	// Even if we don't find any new facts, we need to delete the existing ones
 	// since these may be the end product of a filter process
@@ -542,15 +590,51 @@ func (h *Messaging) sendFactsToLagoonAPI(facts []LagoonFact, apiClient graphql.C
 	return nil
 }
 
+func (h *Messaging) sendProblemsToLagoonAPI(problems []LagoonProblem, client graphql.Client, resource ResourceDestination, source string) error {
+	project, environment, apiErr := determineResourceFromLagoonAPI(client, resource)
+	if apiErr != nil {
+		return fmt.Errorf("failed to determine resource from Lagoon API: %v", apiErr)
+	}
+
+	apiErr = h.deleteExistingProblemsBySource(client, environment, source, resource.Service, project)
+	if apiErr != nil {
+		return fmt.Errorf("failed to delete existing problems from Lagoon API: %v", apiErr)
+	}
+
+	if len(problems) > 0 {
+		log.Printf("Matched %v problems for '%v:%v' from source '%v'", len(problems), project.Name, environment, source)
+
+		apiErr = h.pushProblemsToLagoonApi(problems, resource)
+		if apiErr != nil {
+			return fmt.Errorf("%s", apiErr.Error())
+		}
+	}
+
+	return nil
+}
+
 func (h *Messaging) deleteExistingFactsBySource(apiClient graphql.Client, environment lagoonclient.Environment, source string, project lagoonclient.Project) error {
 	// Remove existing facts from source first
 	_, err := lagoonclient.DeleteFactsFromSource(context.TODO(), apiClient, environment.Id, source)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
 	log.Println("--------------------")
 	log.Printf("Previous facts deleted for '%s:%s' and source '%s'", project.Name, environment.Name, source)
+	log.Println("--------------------")
+	return nil
+}
+
+func (h *Messaging) deleteExistingProblemsBySource(apiClient graphql.Client, environment lagoonclient.Environment, source string, service string, project lagoonclient.Project) error {
+	_, err := lagoonclient.DeleteProblemsFromSource(context.TODO(), apiClient, environment.Id, source, service)
+	if err != nil {
+		return err
+	}
+
+	log.Println("--------------------")
+	log.Printf("Previous problems deleted for '%s:%s' service '%s', and source '%s'", project.Name, environment.Name, service, source)
 	log.Println("--------------------")
 	return nil
 }
@@ -705,6 +789,7 @@ func (h *Messaging) pushFactsToLagoonApi(facts []LagoonFact, resource ResourceDe
 	}
 
 	result, err := lagoonclient.AddFacts(context.TODO(), apiClient, processedFacts)
+	fmt.Println(result)
 	if err != nil {
 		return err
 	}
@@ -712,6 +797,49 @@ func (h *Messaging) pushFactsToLagoonApi(facts []LagoonFact, resource ResourceDe
 	if h.EnableDebug {
 		for _, fact := range facts {
 			log.Println("[DEBUG]...", fact.Name, ":", fact.Value)
+		}
+	}
+
+	log.Println(result)
+	return nil
+}
+
+func (h *Messaging) pushProblemsToLagoonApi(problems []LagoonProblem, resource ResourceDestination) error {
+	apiClient := graphql.NewClient(h.LagoonAPI.Endpoint, &http.Client{Transport: &authedTransport{wrapped: http.DefaultTransport, h: h}})
+
+	log.Println("--------------------")
+	log.Printf("Attempting to add %d problems...", len(problems))
+	log.Println("--------------------")
+
+	processedProblems := make([]lagoonclient.AddProblemInput, len(problems))
+	for i, problem := range problems {
+		processedProblems[i] = lagoonclient.AddProblemInput{
+			Id:                problem.Id,
+			Environment:       problem.Environment,
+			Identifier:        problem.Identifier,
+			Version:           problem.Version,
+			FixedVersion:      problem.FixedVersion,
+			Source:            problem.Source,
+			Service:           problem.Service,
+			Data:              problem.Data,
+			Severity:          lagoonclient.ProblemSeverityRating(problem.Severity),
+			SeverityScore:     problem.SeverityScore,
+			AssociatedPackage: problem.AssociatedPackage,
+			Description:       problem.Description,
+			Links:             problem.Links,
+		}
+	}
+
+	result, err := lagoonclient.AddProblems(context.TODO(), apiClient, processedProblems)
+	fmt.Println(result)
+	if err != nil {
+		fmt.Println(err)
+		return fmt.Errorf("%s", err)
+	}
+
+	if h.EnableDebug {
+		for _, problem := range problems {
+			log.Println("[DEBUG]...", problem.Identifier)
 		}
 	}
 

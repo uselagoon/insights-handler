@@ -36,3 +36,19 @@ mutation deleteFactsFromSource($environment: Int!, $source: String!) {
         source: $source
     })
 }
+
+mutation addProblems($problems: [AddProblemInput]!) {
+    addProblems(input: {
+        problems: $problems
+    }) {
+        id
+    }
+}
+
+mutation deleteProblemsFromSource($environment: Int!, $source: String!, $service: String!) {
+    deleteProblemsFromSource(input: {
+        environment: $environment,
+        source: $source,
+        service: $service
+    })
+}

@@ -225,7 +225,12 @@ input AddProblemInput {
   version: String
   fixedVersion: String
   data: String!
-  created: String
+}
+
+input AddProblemsInput {
+  project: String
+  environment: String
+  problems: [AddProblemInput]!
 }
 
 input AddProjectInput {
@@ -1064,6 +1069,7 @@ type Mutation {
   cancelDeployment(input: CancelDeploymentInput!): String
   addBackup(input: AddBackupInput!): Backup
   addProblem(input: AddProblemInput!): Problem
+  addProblems(input: AddProblemsInput!): [Problem]
   addProblemHarborScanMatch(
     input: AddProblemHarborScanMatchInput!
   ): ProblemHarborScanMatch

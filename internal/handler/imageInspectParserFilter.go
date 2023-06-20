@@ -58,7 +58,7 @@ func processImageInspectInsightsData(h *Messaging, insights InsightsData, v stri
 
 		return facts, source, nil
 	}
-	return []LagoonFact{}, "", nil
+	return nil, "", nil
 }
 
 func processFactsFromImageInspect(imageInspectData ImageData, id int, source string) ([]LagoonFact, error) {
