@@ -1,0 +1,36 @@
+{
+  "projectName": "high-cotton",
+  "environment": 3,
+  "environmentName": "Master",
+  "problems": [
+    {
+      "environment": 3,
+      "identifier": "CVE-2020-8911",
+      "associatedPackage": "github.com/aws/aws-sdk-go",
+      "version": "v1.34.21",
+      "fixedVersion": "v1.34.22",
+      "source": "insights:problems:trivy-vuln-report",
+      "service": "nginx",
+      "data": "{}",
+      "severity": "MEDIUM",
+      "description": "aws/aws-sdk-go: CBC padding oracle issue in AWS S3 Crypto SDK for golang",
+      "links": "https://avd.aquasec.com/nvd/cve-2020-8911",
+      "severityScore": 0.56
+    },
+    {
+      "environment": 3,
+      "identifier": "CVE-2020-8912",
+      "associatedPackage": "github.com/aws/aws-sdk-go",
+      "version": "v1.34.21",
+      "fixedVersion": "v1.34.22",
+      "source": "insights:problems:trivy-vuln-report",
+      "service": "nginx",
+      "data": "{}",
+      "severity": "LOW",
+      "description": "aws-sdk-go: In-band key negotiation issue in AWS S3 Crypto SDK for golang",
+      "links": "https://avd.aquasec.com/nvd/cve-2020-8912",
+      "severityScore": 0.25
+    }
+  ],
+  "type": "direct.problems"
+}

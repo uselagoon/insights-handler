@@ -98,6 +98,33 @@ type DirectFacts struct {
 	Source          string       `json:"source"`
 }
 
+type DirectProblem struct {
+	EnvironmentId     json.Number `json:"environment"`
+	ProjectName       string      `json:"projectName"`
+	EnvironmentName   string      `json:"environmentName"`
+	Identifier        string      `json:"identifier"`
+	Version           string      `json:"version,omitempty"`
+	FixedVersion      string      `json:"fixedVersion,omitempty"`
+	Source            string      `json:"source,omitempty"`
+	Service           string      `json:"service,omitempty"`
+	Data              string      `json:"data"`
+	Severity          string      `json:"severity,omitempty"`
+	SeverityScore     float64     `json:"severityScore,omitempty"`
+	AssociatedPackage string      `json:"associatedPackage,omitempty"`
+	Description       string      `json:"description,omitempty"`
+	Links             string      `json:"links,omitempty"`
+}
+
+type DirectProblems struct {
+	ProjectName     string          `json:"projectName,omitempty"`
+	EnvironmentName string          `json:"environmentName,omitempty"`
+	EnvironmentId   json.Number     `json:"environment,omitempty"`
+	Problems        []DirectProblem `json:"problems"`
+	Type            string          `json:"type"`
+	InsightsType    string          `json:"insightsType"`
+	Source          string          `json:"source"`
+}
+
 type InsightsData struct {
 	InputType               string
 	InputPayload            PayloadType
@@ -330,8 +357,13 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 
 		// if we have direct problems or facts, we process them differently - skipping all
 		// the extra processing below.
-		if incoming.Type == "direct.facts" || incoming.Type == "direct.problems" {
-			resp := processItemsDirectly(message, h)
+		if incoming.Type == "direct.facts" {
+			resp := processFactsDirectly(message, h)
+			log.Println(resp)
+			return
+		}
+		if incoming.Type == "direct.problems" {
+			resp := processProblemsDirectly(message, h)
 			log.Println(resp)
 			return
 		}
@@ -454,7 +486,7 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 	}
 }
 
-func processItemsDirectly(message mq.Message, h *Messaging) string {
+func processFactsDirectly(message mq.Message, h *Messaging) string {
 	var directFacts DirectFacts
 	json.Unmarshal(message.Body(), &directFacts)
 	err := json.Unmarshal(message.Body(), &directFacts)
@@ -502,6 +534,58 @@ func processItemsDirectly(message mq.Message, h *Messaging) string {
 	}
 
 	return facts
+}
+
+func processProblemsDirectly(message mq.Message, h *Messaging) string {
+	var directProblems DirectProblems
+	err := json.Unmarshal(message.Body(), &directProblems)
+	if err != nil {
+		log.Println("Error unmarshaling JSON:", err)
+		return "exciting, unable to process direct problems"
+	}
+
+	environmentId, err := strconv.Atoi(directProblems.EnvironmentId.String())
+	if err != nil {
+		log.Println("Error converting EnvironmentId to int:", err)
+		return "exciting, unable to process direct problems"
+	}
+
+	if h.EnableDebug {
+		log.Print("Direct Problems: ", directProblems)
+	}
+
+	apiClient := graphql.NewClient(h.LagoonAPI.Endpoint, &http.Client{Transport: &authedTransport{wrapped: http.DefaultTransport, h: h}})
+
+	processedProblems := make([]lagoonclient.AddProblemInput, len(directProblems.Problems))
+	for i, problem := range directProblems.Problems {
+		processedProblems[i] = lagoonclient.AddProblemInput{
+			Environment:       environmentId,
+			Identifier:        problem.Identifier,
+			Version:           problem.Version,
+			FixedVersion:      problem.FixedVersion,
+			Source:            directProblems.Source,
+			Service:           problem.Service,
+			Data:              problem.Data,
+			Severity:          lagoonclient.ProblemSeverityRating(problem.Severity),
+			SeverityScore:     problem.SeverityScore,
+			AssociatedPackage: problem.AssociatedPackage,
+			Description:       problem.Description,
+			Links:             problem.Links,
+		}
+	}
+
+	_, err = lagoonclient.DeleteProblemsFromSource(context.TODO(), apiClient, environmentId, directProblems.Source, "")
+	if err != nil {
+		log.Println(err)
+	}
+	log.Printf("Deleted problems on environment %v for source %v", environmentId, directProblems.Source)
+
+	problems, err := lagoonclient.AddProblems(context.TODO(), apiClient, processedProblems)
+	if err != nil {
+		log.Println(err)
+	}
+
+	return problems
 }
 
 // Incoming payload may contain facts or problems, so we need to handle these differently
@@ -627,8 +711,8 @@ func (h *Messaging) deleteExistingFactsBySource(apiClient graphql.Client, enviro
 	return nil
 }
 
-func (h *Messaging) deleteExistingProblemsBySource(apiClient graphql.Client, environment lagoonclient.Environment, source string, service string, project lagoonclient.Project) error {
-	_, err := lagoonclient.DeleteProblemsFromSource(context.TODO(), apiClient, environment.Id, source, service)
+func (h *Messaging) deleteExistingProblemsBySource(apiClient graphql.Client, environment lagoonclient.Environment, service string, source string, project lagoonclient.Project) error {
+	_, err := lagoonclient.DeleteProblemsFromSource(context.TODO(), apiClient, environment.Id, service, source)
 	if err != nil {
 		return err
 	}

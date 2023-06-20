@@ -41,7 +41,6 @@ func processProblemsInsightsData(h *Messaging, insights InsightsData, v string, 
 	}
 
 	if insights.InsightsType == Direct {
-
 		data := DirectProblemsInsightsData{}
 		err := json.Unmarshal([]byte(v), &data)
 		if err != nil {

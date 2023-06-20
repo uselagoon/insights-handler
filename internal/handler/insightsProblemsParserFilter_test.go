@@ -178,7 +178,7 @@ func Test_processDirectProblemsInsightsData(t *testing.T) {
 	}
 	apiClient := h.getApiClient()
 
-	testResponse, err := ioutil.ReadFile("./testassets/testDirectProblems.json")
+	testResponse, err := ioutil.ReadFile("./testassets/problemsPayload.json")
 	if err != nil {
 		t.Fatalf("Could not open file")
 	}
