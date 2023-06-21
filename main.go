@@ -71,6 +71,8 @@ func main() {
 	flag.BoolVar(&enableDebug, "debug", false, "Enable debugging output")
 	flag.Parse()
 
+	handler.EnableDebug = enableDebug
+
 	// get overrides from environment variables
 	mqUser = getEnv("RABBITMQ_USERNAME", mqUser)
 	mqPass = getEnv("RABBITMQ_PASSWORD", mqPass)

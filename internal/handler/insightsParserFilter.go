@@ -73,10 +73,7 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 		return nil, "", fmt.Errorf("no facts to process")
 	}
 
-	log.Printf("Successfully decoded SBOM of image %s\n", bom.Metadata.Component.Name)
-	log.Printf("- Generated: %s with %s\n", bom.Metadata.Timestamp, (*bom.Metadata.Tools)[0].Name)
-	log.Printf("- Packages found: %d\n", len(*bom.Components))
-
+	log.Printf("Successfully decoded SBOM of image %s with %s, found %d for '%s:%s'", bom.Metadata.Component.Name, (*bom.Metadata.Tools)[0].Name, len(*bom.Components), resource.Project, resource.Environment)
 	return facts, source, nil
 }
 
@@ -107,7 +104,9 @@ func processFactsFromSBOM(facts *[]cdx.Component, environmentId int, source stri
 			KeyFact:     false,
 			Type:        FactTypeText,
 		}
-		fmt.Println("Processing fact name " + f.Name)
+		if EnableDebug {
+			log.Println("[DEBUG] processing fact name " + f.Name)
+		}
 		fact, _ = ProcessLagoonFactAgainstRegisteredFilters(fact, f)
 		factsInput = append(factsInput, fact)
 	}

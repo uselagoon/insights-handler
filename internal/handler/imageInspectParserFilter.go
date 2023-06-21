@@ -49,7 +49,7 @@ func processImageInspectInsightsData(h *Messaging, insights InsightsData, v stri
 		if err != nil {
 			return nil, "", err
 		}
-		log.Printf("Successfully decoded image-inspect")
+		log.Printf("Successfully decoded image-inspect, for '$s:$s', from '%s'", resource.Project, resource.Environment, source)
 
 		facts, err = KeyFactsFilter(facts)
 		if err != nil {
@@ -95,7 +95,9 @@ func processFactsFromImageInspect(imageInspectData ImageData, id int, source str
 			KeyFact:     false,
 			Type:        FactTypeText,
 		}
-		fmt.Println("Processing fact name " + f.Key)
+		if EnableDebug {
+			log.Println("[DEBUG] processing fact name " + f.Key)
+		}
 		fact, _ = ProcessLagoonFactAgainstRegisteredFilters(fact, f)
 		factsInput = append(factsInput, fact)
 	}

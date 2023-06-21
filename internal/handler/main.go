@@ -29,6 +29,8 @@ import (
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient/jwt"
 )
 
+var EnableDebug bool
+
 // RabbitBroker .
 type RabbitBroker struct {
 	Hostname     string `json:"hostname"`
@@ -369,7 +371,9 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 
 		// Determine incoming payload type
 		if incoming.Payload == nil && incoming.BinaryPayload == nil {
-			log.Printf("no payload was found")
+			if h.EnableDebug {
+				log.Printf("[DEBUG] no payload was found")
+			}
 			err := message.Reject(false)
 			if err != nil {
 				fmt.Errorf("%s", err.Error())
@@ -439,7 +443,7 @@ func processItemsDirectly(message mq.Message, h *Messaging) string {
 	}
 
 	if h.EnableDebug {
-		log.Print("directFacts: ", directFacts)
+		log.Print("[DEBUG] facts", directFacts)
 	}
 
 	apiClient := graphql.NewClient(h.LagoonAPI.Endpoint, &http.Client{Transport: &authedTransport{wrapped: http.DefaultTransport, h: h}})
@@ -462,7 +466,7 @@ func processItemsDirectly(message mq.Message, h *Messaging) string {
 	if err != nil {
 		log.Println(err)
 	}
-	log.Printf("Deleted facts on environment %v for source %v", environmentId, directFacts.Source)
+	log.Printf("Deleted facts on '%v:%v' for source %v", directFacts.ProjectName, directFacts.EnvironmentName, directFacts.Source)
 
 	facts, err := lagoonclient.AddFacts(context.TODO(), apiClient, processedFacts)
 	if err != nil {
@@ -521,9 +525,13 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 }
 
 func (h *Messaging) sendFactsToLagoonAPI(facts []LagoonFact, apiClient graphql.Client, resource ResourceDestination, source string) error {
-
 	project, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
-	log.Printf("Matched %v number of facts for project:environment '%v:%v' from source '%v'", len(facts), project.Name, environment, source)
+	if apiErr != nil {
+		log.Println(apiErr)
+	}
+	if EnableDebug {
+		log.Printf("[DEBUG] matched %d number of fact(s) for '%v:%v', from source '%s'", len(facts), project.Name, environment, source)
+	}
 
 	// Even if we don't find any new facts, we need to delete the existing ones
 	// since these may be the end product of a filter process
@@ -549,9 +557,7 @@ func (h *Messaging) deleteExistingFactsBySource(apiClient graphql.Client, enviro
 		return err
 	}
 
-	log.Println("--------------------")
 	log.Printf("Previous facts deleted for '%s:%s' and source '%s'", project.Name, environment.Name, source)
-	log.Println("--------------------")
 	return nil
 }
 
@@ -602,7 +608,7 @@ func (h *Messaging) sendToLagoonS3(incoming *InsightsMessage, insights InsightsD
 			return err
 		}
 	} else {
-		log.Printf("Successfully created %s\n", h.S3Config.Bucket)
+		log.Printf("Successfully created %s", h.S3Config.Bucket)
 	}
 
 	if len(incoming.Payload) != 0 {
@@ -621,9 +627,7 @@ func (h *Messaging) sendToLagoonS3(incoming *InsightsMessage, insights InsightsD
 			return putObjErr
 		}
 
-		log.Println("--------------------")
-		log.Printf("Successfully uploaded %s of size %d\n", objectName, info.Size)
-		log.Println("--------------------")
+		log.Printf("Successfully uploaded %s of size %d", objectName, info.Size)
 	}
 
 	if len(incoming.BinaryPayload) != 0 {
@@ -685,9 +689,9 @@ func (h *Messaging) sendToLagoonS3(incoming *InsightsMessage, insights InsightsD
 func (h *Messaging) pushFactsToLagoonApi(facts []LagoonFact, resource ResourceDestination) error {
 	apiClient := graphql.NewClient(h.LagoonAPI.Endpoint, &http.Client{Transport: &authedTransport{wrapped: http.DefaultTransport, h: h}})
 
-	log.Println("--------------------")
-	log.Printf("Attempting to add %d fact/s...", len(facts))
-	log.Println("--------------------")
+	if EnableDebug {
+		log.Printf("[DEBUG] attempting to add %d fact(s)...", len(facts))
+	}
 
 	processedFacts := make([]lagoonclient.AddFactInput, len(facts))
 	for i, fact := range facts {
@@ -711,7 +715,7 @@ func (h *Messaging) pushFactsToLagoonApi(facts []LagoonFact, resource ResourceDe
 
 	if h.EnableDebug {
 		for _, fact := range facts {
-			log.Println("[DEBUG]...", fact.Name, ":", fact.Value)
+			log.Println("[DEBUG]", fact.Name, ":", fact.Value)
 		}
 	}
 
@@ -770,7 +774,7 @@ func (h *Messaging) toLagoonInsights(messageQueue mq.MQ, message map[string]inte
 	msgBytes, err := json.Marshal(message)
 	if err != nil {
 		if h.EnableDebug {
-			log.Println(err, "Unable to encode message as JSON")
+			log.Println("[DEBUG]", err, "Unable to encode message as JSON")
 		}
 	}
 	producer, err := messageQueue.AsyncProducer("lagoon-insights")
