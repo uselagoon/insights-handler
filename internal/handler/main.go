@@ -86,6 +86,7 @@ type DirectFact struct {
 	Type            string      `json:"type"`
 	Category        string      `json:"category"`
 	Service         string      `json:"service"`
+	Source          string      `json:"source"`
 }
 
 type DirectFacts struct {
@@ -95,7 +96,6 @@ type DirectFacts struct {
 	Facts           []DirectFact `json:"facts"`
 	Type            string       `json:"type"`
 	InsightsType    string       `json:"insightsType"`
-	Source          string       `json:"source"`
 }
 
 type InsightsData struct {
@@ -448,25 +448,36 @@ func processItemsDirectly(message mq.Message, h *Messaging) string {
 
 	apiClient := graphql.NewClient(h.LagoonAPI.Endpoint, &http.Client{Transport: &authedTransport{wrapped: http.DefaultTransport, h: h}})
 
+	factSources := map[string]string{}
+
 	processedFacts := make([]lagoonclient.AddFactInput, len(directFacts.Facts))
 	for i, fact := range directFacts.Facts {
+
+		vartypeString := FactTypeText
+		if fact.Type == FactTypeText || fact.Type == FactTypeSemver || fact.Type == FactTypeUrl {
+			vartypeString = fact.Type
+		}
+
 		processedFacts[i] = lagoonclient.AddFactInput{
 			Environment: environmentId,
 			Name:        fact.Name,
 			Value:       fact.Value,
-			Source:      directFacts.Source,
+			Source:      fact.Source,
 			Description: fact.Description,
 			KeyFact:     false,
-			Type:        lagoonclient.FactType(FactTypeText),
+			Type:        lagoonclient.FactType(vartypeString),
 			Category:    fact.Category,
 		}
+		factSources[fact.Source] = fact.Source
 	}
 
-	_, err = lagoonclient.DeleteFactsFromSource(context.TODO(), apiClient, environmentId, directFacts.Source)
-	if err != nil {
-		log.Println(err)
+	for _, s := range factSources {
+		_, err = lagoonclient.DeleteFactsFromSource(context.TODO(), apiClient, environmentId, s)
+		if err != nil {
+			log.Println(err)
+		}
+		log.Printf("Deleted facts on '%v:%v' for source %v", directFacts.ProjectName, directFacts.EnvironmentName, s)
 	}
-	log.Printf("Deleted facts on '%v:%v' for source %v", directFacts.ProjectName, directFacts.EnvironmentName, directFacts.Source)
 
 	facts, err := lagoonclient.AddFacts(context.TODO(), apiClient, processedFacts)
 	if err != nil {
