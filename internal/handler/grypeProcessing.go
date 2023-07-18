@@ -145,8 +145,6 @@ func writeProblemsArrayToApi(environment int, source string, service string, pro
 		return err
 	}
 
-	//fmt.Println(data)
-
 	return nil
 }
 
