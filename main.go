@@ -93,6 +93,7 @@ func main() {
 	filterTransformerFile = getEnv("FILTER_TRANSFORMER_FILE", filterTransformerFile)
 	s3useSSL = getEnvBool("S3_USESSL", s3useSSL)
 	disableAPIIntegration = getEnvBool("INSIGHTS_DISABLE_API_INTEGRATION", disableAPIIntegration)
+	disableS3Upload = getEnvBool("INSIGHTS_DISABLE_S3_UPLOAD", disableS3Upload)
 
 	// configure the backup handler settings
 	broker := handler.RabbitBroker{

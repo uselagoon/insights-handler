@@ -295,7 +295,7 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 			// Ack to remove from queue
 			err := message.Ack(false)
 			if err != nil {
-				fmt.Errorf("%s", err.Error())
+				fmt.Printf("Failed to acknowledge message: %s\n", err.Error())
 			}
 		}(message)
 
@@ -376,7 +376,7 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 			}
 			err := message.Reject(false)
 			if err != nil {
-				fmt.Errorf("%s", err.Error())
+				fmt.Printf("Unable to reject payload: %s\n", err.Error())
 			}
 			return
 		}
@@ -416,12 +416,6 @@ func processingIncomingMessageQueueFactory(h *Messaging) func(mq.Message) {
 					log.Printf("Unable to send to the api: %s", err.Error())
 				}
 			}
-		}
-
-		// Ack to remove from queue
-		err := message.Ack(false)
-		if err != nil {
-			fmt.Errorf("%s", err.Error())
 		}
 	}
 }
