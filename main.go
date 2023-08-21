@@ -40,6 +40,8 @@ var (
 	disableS3Upload              bool
 	disableAPIIntegration        bool
 	enableDebug                  bool
+	problemsFromSBOM             bool
+	grypeBinaryLocation          string
 )
 
 func main() {
@@ -69,7 +71,8 @@ func main() {
 	flag.BoolVar(&disableS3Upload, "disable-s3-upload", false, "Disable uploading insights data to an s3 s3Bucket")
 	flag.BoolVar(&disableAPIIntegration, "disable-api-integration", false, "Disable insights data integration for the Lagoon API")
 	flag.BoolVar(&enableDebug, "debug", false, "Enable debugging output")
-	flag.Parse()
+	flag.BoolVar(&problemsFromSBOM, "problems-from-sbom", false, "Pass any SBOM through Grype")
+	flag.StringVar(&grypeBinaryLocation, "grype-binary-location", "/usr/local/bin/grype", "Location of the Grype binary on disk")
 
 	handler.EnableDebug = enableDebug
 
@@ -94,6 +97,8 @@ func main() {
 	s3useSSL = getEnvBool("S3_USESSL", s3useSSL)
 	disableAPIIntegration = getEnvBool("INSIGHTS_DISABLE_API_INTEGRATION", disableAPIIntegration)
 	disableS3Upload = getEnvBool("INSIGHTS_DISABLE_S3_UPLOAD", disableS3Upload)
+	problemsFromSBOM = getEnvBool("PROBLEMS_FROM_SBOM", problemsFromSBOM)
+	grypeBinaryLocation = getEnv("GRYPE_BINARY_LOCATION", grypeBinaryLocation)
 
 	// configure the backup handler settings
 	broker := handler.RabbitBroker{
@@ -177,6 +182,8 @@ func main() {
 		startupConnectionAttempts,
 		startupConnectionInterval,
 		enableDebug,
+		problemsFromSBOM,
+		grypeBinaryLocation,
 	)
 
 	// start the consumer

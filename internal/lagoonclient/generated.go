@@ -20,6 +20,23 @@ type AddFactInput struct {
 	Category    string   `json:"category"`
 }
 
+type AddProblemInput struct {
+	Id                int                   `json:"id"`
+	Environment       int                   `json:"environment"`
+	Severity          ProblemSeverityRating `json:"severity"`
+	SeverityScore     float64               `json:"severityScore"`
+	Identifier        string                `json:"identifier"`
+	Service           string                `json:"service"`
+	Source            string                `json:"source"`
+	AssociatedPackage string                `json:"associatedPackage"`
+	Description       string                `json:"description"`
+	Links             string                `json:"links"`
+	Version           string                `json:"version"`
+	FixedVersion      string                `json:"fixedVersion"`
+	Data              string                `json:"data"`
+	Created           string                `json:"created"`
+}
+
 type FactType string
 
 const (
@@ -28,15 +45,39 @@ const (
 	FactTypeSemver FactType = "SEMVER"
 )
 
+type ProblemSeverityRating string
+
+const (
+	ProblemSeverityRatingNone       ProblemSeverityRating = "NONE"
+	ProblemSeverityRatingUnknown    ProblemSeverityRating = "UNKNOWN"
+	ProblemSeverityRatingNegligible ProblemSeverityRating = "NEGLIGIBLE"
+	ProblemSeverityRatingLow        ProblemSeverityRating = "LOW"
+	ProblemSeverityRatingMedium     ProblemSeverityRating = "MEDIUM"
+	ProblemSeverityRatingHigh       ProblemSeverityRating = "HIGH"
+	ProblemSeverityRatingCritical   ProblemSeverityRating = "CRITICAL"
+)
+
 // __addFactsInput is used internally by genqlient
 type __addFactsInput struct {
 	Facts []AddFactInput `json:"facts"`
+}
+
+// __addProblemInput is used internally by genqlient
+type __addProblemInput struct {
+	Problem AddProblemInput `json:"problem"`
 }
 
 // __deleteFactsFromSourceInput is used internally by genqlient
 type __deleteFactsFromSourceInput struct {
 	Environment int    `json:"environment"`
 	Source      string `json:"source"`
+}
+
+// __deleteProblemsFromSourceInput is used internally by genqlient
+type __deleteProblemsFromSourceInput struct {
+	Environment int    `json:"environment"`
+	Source      string `json:"source"`
+	Service     string `json:"service"`
 }
 
 // __getEnvironmentByNameInput is used internally by genqlient
@@ -65,9 +106,24 @@ type addFactsResponse struct {
 	AddFacts []addFactsAddFactsFact `json:"addFacts"`
 }
 
+// addProblemAddProblem includes the requested fields of the GraphQL type Problem.
+type addProblemAddProblem struct {
+	Id int `json:"id"`
+}
+
+// addProblemResponse is returned by addProblem on success.
+type addProblemResponse struct {
+	AddProblem addProblemAddProblem `json:"addProblem"`
+}
+
 // deleteFactsFromSourceResponse is returned by deleteFactsFromSource on success.
 type deleteFactsFromSourceResponse struct {
 	DeleteFactsFromSource string `json:"deleteFactsFromSource"`
+}
+
+// deleteProblemsFromSourceResponse is returned by deleteProblemsFromSource on success.
+type deleteProblemsFromSourceResponse struct {
+	DeleteProblemsFromSource string `json:"deleteProblemsFromSource"`
 }
 
 // getEnvironmentByNameEnvironmentByNameEnvironment includes the requested fields of the GraphQL type Environment.
@@ -251,6 +307,62 @@ func deleteFactsFromSource(
 		`
 mutation deleteFactsFromSource ($environment: Int!, $source: String!) {
 	deleteFactsFromSource(input: {environment:$environment,source:$source})
+}
+`,
+		&retval,
+		&__input,
+	)
+	return &retval, err
+}
+
+func addProblem(
+	ctx context.Context,
+	client graphql.Client,
+	problem AddProblemInput,
+) (*addProblemResponse, error) {
+	__input := __addProblemInput{
+		Problem: problem,
+	}
+	var err error
+
+	var retval addProblemResponse
+	err = client.MakeRequest(
+		ctx,
+		"addProblem",
+		`
+mutation addProblem ($problem: AddProblemInput!) {
+	addProblem(input: $problem) {
+		id
+	}
+}
+`,
+		&retval,
+		&__input,
+	)
+	return &retval, err
+}
+
+func deleteProblemsFromSource(
+	ctx context.Context,
+	client graphql.Client,
+	environment int,
+	source string,
+	service string,
+) (*deleteProblemsFromSourceResponse, error) {
+	__input := __deleteProblemsFromSourceInput{
+		Environment: environment,
+		Source:      source,
+		Service:     service,
+	}
+	var err error
+
+	var retval deleteProblemsFromSourceResponse
+	err = client.MakeRequest(
+		ctx,
+		"deleteProblemsFromSource",
+		`
+mutation deleteProblemsFromSource ($environment: Int!, $source: String!, $service: String!) {
+	deleteProblemsFromSource(input: {environment:$environment,source:$source,service:$service})
 }
 `,
 		&retval,
