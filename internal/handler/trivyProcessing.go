@@ -5,8 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/CycloneDX/cyclonedx-go"
+	"github.com/aquasecurity/trivy/pkg/commands/artifact"
+	"github.com/aquasecurity/trivy/pkg/flag"
+	"github.com/aquasecurity/trivy/pkg/types"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient"
 	"io"
+	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -64,8 +69,6 @@ func processQueue() {
 			vulnerabilitiesBom, err := executeProcessing(queue.GrypeLocation, i.SBOM)
 			if err != nil {
 				fmt.Println("Unable to process queue item")
-				//fmt.Println(i)
-				//fmt.Print(err)
 				continue
 			}
 			problemArray, err := convertBOMToProblemsArray(i.EnvironmentId, problemSource, i.Service, vulnerabilitiesBom)
@@ -146,6 +149,107 @@ func writeProblemsArrayToApi(environment int, source string, service string, pro
 	}
 
 	return nil
+}
+
+func executeProcessingTrivy(bom cyclonedx.BOM) (cyclonedx.BOM, error) {
+	//first, we write this thing to disk
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1000)
+	defer cancel()
+
+	opts := flag.Options{
+		GlobalOptions: flag.GlobalOptions{
+			ConfigFile: "trivy.yaml",
+			CacheDir:   "/home/bomoko/.cache/trivy",
+		},
+		AWSOptions: flag.AWSOptions{},
+		CacheOptions: flag.CacheOptions{
+			CacheBackend: "fs",
+		},
+		CloudOptions: flag.CloudOptions{},
+		DBOptions: flag.DBOptions{
+			DBRepository:     "ghcr.io/aquasecurity/trivy-db",
+			JavaDBRepository: "ghcr.io/aquasecurity/trivy-java-db",
+		},
+		ImageOptions:    flag.ImageOptions{},
+		K8sOptions:      flag.K8sOptions{},
+		LicenseOptions:  flag.LicenseOptions{},
+		MisconfOptions:  flag.MisconfOptions{},
+		ModuleOptions:   flag.ModuleOptions{},
+		RegistryOptions: flag.RegistryOptions{},
+		RegoOptions:     flag.RegoOptions{},
+		RemoteOptions: flag.RemoteOptions{
+			ServerAddr:    "http://localhost:4954",
+			Token:         "",
+			TokenHeader:   "Trivy-Token",
+			CustomHeaders: http.Header{},
+		},
+		RepoOptions:   flag.RepoOptions{},
+		ReportOptions: flag.ReportOptions{},
+		SBOMOptions:   flag.SBOMOptions{},
+		ScanOptions: flag.ScanOptions{
+			Target: "/home/bomoko/Downloads/sbomtest.json",
+			Scanners: types.Scanners{
+				types.VulnerabilityScanner,
+			},
+		},
+		SecretOptions: flag.SecretOptions{},
+		VulnerabilityOptions: flag.VulnerabilityOptions{
+			VulnType: []string{
+				"os",
+				"library",
+			},
+		},
+		AppVersion:        "dev",
+		DisabledAnalyzers: nil,
+	}
+	runner, err := artifact.NewRunner(ctx, opts)
+
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+
+	rep, err := runner.ScanSBOM(context.TODO(), opts)
+
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+
+	fmt.Println(rep)
+	return cyclonedx.BOM{}, nil
+}
+
+func trivyReportToProblems(environment int, source string, service string, report types.Report) ([]lagoonclient.LagoonProblem, error) {
+	var ret []lagoonclient.LagoonProblem
+	if len(report.Results) == 0 {
+		return ret, fmt.Errorf("No Vulnerabilities")
+	}
+
+	for _, res := range report.Results {
+		for _, v := range res.Vulnerabilities {
+			p := lagoonclient.LagoonProblem{
+				Environment:       environment,
+				Identifier:        v.VulnerabilityID,
+				Version:           v.InstalledVersion,
+				FixedVersion:      v.FixedVersion,
+				Source:            source,
+				Service:           service,
+				Data:              "{}",
+				AssociatedPackage: "",
+				Description:       v.Vulnerability.Description,
+				// Severity:
+			}
+
+			if len(v.Vulnerability.References) > 0 {
+				p.Links = v.Vulnerability.References[0]
+			}
+
+			p.Severity = lagoonclient.ProblemSeverityRating(v.Vulnerability.Severity)
+
+		}
+	}
+	return ret, nil
 }
 
 func executeProcessing(grypeLocation string, bom cyclonedx.BOM) (cyclonedx.BOM, error) {
