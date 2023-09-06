@@ -48,7 +48,7 @@ func TestAddFacts(t *testing.T) {
 		return
 	}
 
-	if result != "Added 2 facts" {
+	if result != "Added 2 fact(s)" {
 		t.Errorf("Two facts should have been added: %v", err)
 		return
 	}

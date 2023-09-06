@@ -106,7 +106,7 @@ func Test_processDirectFacts(t *testing.T) {
 				message: &MockMessage{},
 				h:       &h,
 			},
-			want:    "Added 2 facts",
+			want:    "Added 2 fact(s)",
 			want1:   "insights:facts:cli",
 			wantErr: false,
 		},

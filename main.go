@@ -71,6 +71,8 @@ func main() {
 	flag.BoolVar(&enableDebug, "debug", false, "Enable debugging output")
 	flag.Parse()
 
+	handler.EnableDebug = enableDebug
+
 	// get overrides from environment variables
 	mqUser = getEnv("RABBITMQ_USERNAME", mqUser)
 	mqPass = getEnv("RABBITMQ_PASSWORD", mqPass)
@@ -90,6 +92,8 @@ func main() {
 	s3Region = getEnv("S3_FILES_REGION", s3Region)
 	filterTransformerFile = getEnv("FILTER_TRANSFORMER_FILE", filterTransformerFile)
 	s3useSSL = getEnvBool("S3_USESSL", s3useSSL)
+	disableAPIIntegration = getEnvBool("INSIGHTS_DISABLE_API_INTEGRATION", disableAPIIntegration)
+	disableS3Upload = getEnvBool("INSIGHTS_DISABLE_S3_UPLOAD", disableS3Upload)
 
 	// configure the backup handler settings
 	broker := handler.RabbitBroker{
