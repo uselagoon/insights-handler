@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM golang:1.18-alpine3.15 as builder
+FROM 1.20.8-alpine3.18 as builder
 
 COPY . /go/src/github.com/uselagoon/lagoon/services/insights-handler/
 WORKDIR /go/src/github.com/uselagoon/lagoon/services/insights-handler/
