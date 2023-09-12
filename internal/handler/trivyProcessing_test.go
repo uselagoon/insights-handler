@@ -28,7 +28,7 @@ func Test_executeProcessing(t *testing.T) {
 	}
 
 	//Let's ensure that grype is available locally
-	grypePath := "./testassets/bin/grype"
+	grypePath := "./testassets/bin/trivy"
 	if _, err := os.Stat(grypePath); os.IsNotExist(err) {
 		t.Errorf("Grype not found at %v - please run `make gettestgrype`", grypePath)
 		return
@@ -144,6 +144,64 @@ func Test_trivyReportToProblems(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("trivyReportToProblems() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_executeProcessingTrivy(t *testing.T) {
+	type args struct {
+		trivyRemoteAddress string
+		bomWriteDir        string
+		bomFile            string
+	}
+	tests := []struct {
+		name              string
+		args              args
+		numberProblemsMin int
+		wantErr           bool
+	}{
+		{
+			name:              "Basic test",
+			numberProblemsMin: 20,
+			args: args{
+				trivyRemoteAddress: "http://localhost:4954",
+				bomWriteDir:        "/tmp/",
+				bomFile:            "testassets/bomToProblems_test1.json",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			// load up the bom
+			fileData, err := os.ReadFile(tt.args.bomFile)
+			if err != nil {
+				t.Errorf("Unable to open sbom file '%v' error '%v'", tt.args.bomFile, err.Error())
+				return
+			}
+
+			var testBom cyclonedx.BOM
+
+			err = json.Unmarshal(fileData, &testBom)
+			if err != nil {
+				t.Errorf("Unable to parse sbom file '%v' error %v ", tt.args.bomFile, err.Error())
+				return
+			}
+
+			got, err := executeProcessingTrivy(tt.args.trivyRemoteAddress, tt.args.bomWriteDir, testBom)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("executeProcessingTrivy() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			problems, err := trivyReportToProblems(0, "", "", got)
+			if err != nil {
+				t.Errorf("%v", err.Error())
+				return
+			}
+
+			if len(problems) < tt.numberProblemsMin {
+				t.Errorf("Number of problems inaccurate got %v, wanted more than %v", len(problems), tt.numberProblemsMin)
 			}
 		})
 	}

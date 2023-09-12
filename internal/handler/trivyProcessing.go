@@ -151,15 +151,44 @@ func writeProblemsArrayToApi(environment int, source string, service string, pro
 	return nil
 }
 
-func executeProcessingTrivy(bom cyclonedx.BOM) (cyclonedx.BOM, error) {
+func executeProcessingTrivy(trivyRemoteAddress string, bomWriteDir string, bom cyclonedx.BOM) (types.Report, error) {
 	//first, we write this thing to disk
+	file, err := os.CreateTemp(bomWriteDir, "cycloneDX-*.json")
+	if err != nil {
+		return types.Report{}, err
+	}
+
+	marshalledBom, err := json.Marshal(bom)
+
+	if err != nil {
+		return types.Report{}, err
+	}
+
+	_, err = file.Write(marshalledBom)
+	if err != nil {
+		return types.Report{}, err
+	}
+
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return types.Report{}, err
+	}
+
+	fullFilename := fmt.Sprintf("%v/%v", bomWriteDir, fileInfo.Name())
+
+	// Let's defer removing our file till the function returns
+	defer func() {
+		os.Remove(fullFilename)
+		file.Close()
+	}()
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1000)
 	defer cancel()
 
 	opts := flag.Options{
 		GlobalOptions: flag.GlobalOptions{
 			ConfigFile: "trivy.yaml",
-			CacheDir:   "/home/bomoko/.cache/trivy",
+			CacheDir:   "/tmp/.cache/trivy",
 		},
 		AWSOptions: flag.AWSOptions{},
 		CacheOptions: flag.CacheOptions{
@@ -178,7 +207,7 @@ func executeProcessingTrivy(bom cyclonedx.BOM) (cyclonedx.BOM, error) {
 		RegistryOptions: flag.RegistryOptions{},
 		RegoOptions:     flag.RegoOptions{},
 		RemoteOptions: flag.RemoteOptions{
-			ServerAddr:    "http://localhost:4954",
+			ServerAddr:    trivyRemoteAddress,
 			Token:         "",
 			TokenHeader:   "Trivy-Token",
 			CustomHeaders: http.Header{},
@@ -187,7 +216,7 @@ func executeProcessingTrivy(bom cyclonedx.BOM) (cyclonedx.BOM, error) {
 		ReportOptions: flag.ReportOptions{},
 		SBOMOptions:   flag.SBOMOptions{},
 		ScanOptions: flag.ScanOptions{
-			Target: "/home/bomoko/Downloads/sbomtest.json",
+			Target: fullFilename,
 			Scanners: types.Scanners{
 				types.VulnerabilityScanner,
 			},
@@ -205,19 +234,16 @@ func executeProcessingTrivy(bom cyclonedx.BOM) (cyclonedx.BOM, error) {
 	runner, err := artifact.NewRunner(ctx, opts)
 
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return types.Report{}, err
 	}
 
 	rep, err := runner.ScanSBOM(context.TODO(), opts)
 
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return types.Report{}, err
 	}
 
-	fmt.Println(rep)
-	return cyclonedx.BOM{}, nil
+	return rep, nil
 }
 
 func trivyReportToProblems(environment int, source string, service string, report types.Report) ([]lagoonclient.LagoonProblem, error) {
@@ -247,6 +273,7 @@ func trivyReportToProblems(environment int, source string, service string, repor
 
 			p.Severity = lagoonclient.ProblemSeverityRating(v.Vulnerability.Severity)
 
+			ret = append(ret, p)
 		}
 	}
 	return ret, nil
