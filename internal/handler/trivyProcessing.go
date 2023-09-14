@@ -62,6 +62,27 @@ func sbomQueuePop() *sbomQueueItem {
 	return nil
 }
 
+func SbomToProblems(trivyRemoteAddress string, bomWriteDirectory string, environmentId int, service string, sbom cyclonedx.BOM) error {
+	rep, err := executeProcessingTrivy(trivyRemoteAddress, bomWriteDirectory, sbom)
+	if err != nil {
+		return err
+	}
+
+	problems, err := trivyReportToProblems(environmentId, problemSource, service, rep)
+
+	if err != nil {
+		return err
+	}
+
+	err = writeProblemsArrayToApi(environmentId, problemSource, service, problems)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func processQueue() {
 	for {
 		i := sbomQueuePop()
