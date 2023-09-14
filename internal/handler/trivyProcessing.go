@@ -151,6 +151,26 @@ func writeProblemsArrayToApi(environment int, source string, service string, pro
 	return nil
 }
 
+func testTrivyServerIsAlive(trivyRemoteAddress string) (bool, error) {
+	resp, err := http.Get(fmt.Sprintf("%v/healthz", trivyRemoteAddress))
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return false, nil
+	}
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false, err
+	}
+	body := string(bodyBytes)
+
+	return body == "ok", nil
+}
+
 func executeProcessingTrivy(trivyRemoteAddress string, bomWriteDir string, bom cyclonedx.BOM) (types.Report, error) {
 	//first, we write this thing to disk
 	file, err := os.CreateTemp(bomWriteDir, "cycloneDX-*.json")
