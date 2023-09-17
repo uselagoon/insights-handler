@@ -67,7 +67,7 @@ func main() {
 	flag.StringVar(&s3Bucket, "s3-bucket", "lagoon-insights", "The s3 bucket name.")
 	flag.StringVar(&s3Region, "s3-region", "", "The s3 region.")
 	flag.BoolVar(&s3useSSL, "s3-usessl", true, "Use SSL with S3")
-	flag.StringVar(&filterTransformerFile, "filter-transformer-file", "./default_filter_transformers.json", "The filter/transformers to load.")
+	flag.StringVar(&filterTransformerFile, "filter-transformer-file", "./default_filter_transformers.yaml", "The filter/transformers to load.")
 	flag.BoolVar(&disableS3Upload, "disable-s3-upload", false, "Disable uploading insights data to an s3 s3Bucket")
 	flag.BoolVar(&disableAPIIntegration, "disable-api-integration", false, "Disable insights data integration for the Lagoon API")
 	flag.BoolVar(&enableDebug, "debug", false, "Enable debugging output")
@@ -127,7 +127,7 @@ func main() {
 	}
 
 	log.Println("Registering Fact Filters/Transformer")
-	err := handler.RegisterFiltersFromJson(filterTransformerFile)
+	err := handler.RegisterFiltersFromDisk(filterTransformerFile)
 	if err != nil {
 		log.Println(err)
 	}

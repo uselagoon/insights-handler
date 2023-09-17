@@ -11,11 +11,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/matryer/try v0.0.0-20161228173917-9ac251b645a2
 	github.com/stretchr/testify v1.8.4
-)
-
-replace (
-	github.com/docker/cli => github.com/docker/cli v20.10.19+incompatible
-	github.com/docker/docker => github.com/docker/docker v20.10.19+incompatible
+	gopkg.in/yaml.v1 v1.0.0-20140924161607-9f9df34309c0
 )
 
 require (
@@ -342,6 +338,11 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.14.1 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
+)
+
+replace (
+	github.com/docker/cli => github.com/docker/cli v20.10.19+incompatible
+	github.com/docker/docker => github.com/docker/docker v20.10.19+incompatible
 )
 
 require (
