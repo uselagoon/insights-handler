@@ -2,7 +2,11 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
+	"gopkg.in/yaml.v1"
 	"io/ioutil"
+	"path/filepath"
+	"strings"
 )
 
 var KeyFactFilters []func(filter parserFilter) parserFilter
@@ -59,11 +63,22 @@ func LoadTransformsFromDisk(filename string) ([]FactTransform, error) {
 	if err != nil {
 		return ret.Transforms, err
 	}
-	err = json.Unmarshal(file, &ret)
+
+	ext := strings.ToLower(filepath.Ext(filename))
+
+	switch ext {
+	case ".json":
+		err = json.Unmarshal(file, &ret)
+	case ".yaml", ".yml":
+		err = yaml.Unmarshal(file, &ret)
+	default:
+		err = fmt.Errorf("Unsupported file type for default transforms: %v", ext)
+	}
 
 	if err != nil {
 		return ret.Transforms, err
 	}
+
 	return ret.Transforms, nil
 }
 
@@ -103,7 +118,7 @@ func GenerateFilterFromTransform(transform FactTransform) (func(filter parserFil
 
 }
 
-func RegisterFiltersFromJson(filename string) error {
+func RegisterFiltersFromDisk(filename string) error {
 
 	transforms, err := LoadTransformsFromDisk(filename)
 	if err != nil {

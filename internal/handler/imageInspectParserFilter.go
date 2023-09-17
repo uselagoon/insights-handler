@@ -49,7 +49,7 @@ func processImageInspectInsightsData(h *Messaging, insights InsightsData, v stri
 		if err != nil {
 			return nil, "", err
 		}
-		log.Printf("Successfully decoded image-inspect, for '$s:$s', from '%s'", resource.Project, resource.Environment, source)
+		log.Printf("Successfully decoded image-inspect, for '%s:%s', from '%s'", resource.Project, resource.Environment, source)
 
 		facts, err = KeyFactsFilter(facts)
 		if err != nil {
