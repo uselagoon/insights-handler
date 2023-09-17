@@ -23,7 +23,7 @@ FROM alpine:3.15
 WORKDIR /
 COPY --from=builder /go/src/github.com/uselagoon/lagoon/services/insights-handler/insights-handler .
 
-COPY default_filter_transformers.json /default_filter_transformers.json
+COPY default_filter_transformers.yaml /default_filter_transformers.yaml
 USER 65532:65532
 
 ENTRYPOINT ["/insights-handler"]
