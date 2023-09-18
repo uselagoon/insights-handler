@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -260,67 +259,6 @@ func (t *authedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 	req.Header.Set("Authorization", "bearer "+token)
 	return t.wrapped.RoundTrip(req)
-}
-
-func processItemsDirectly(message mq.Message, h *Messaging) string {
-	var directFacts DirectFacts
-	json.Unmarshal(message.Body(), &directFacts)
-	err := json.Unmarshal(message.Body(), &directFacts)
-	if err != nil {
-		log.Println("Error unmarshaling JSON:", err)
-		return "exciting, unable to process direct facts"
-	}
-
-	// since its useful to allow int and string json definitions, we need to convert strings here to ints.
-	environmentId, err := strconv.Atoi(directFacts.EnvironmentId.String())
-	if err != nil {
-		log.Println("Error converting EnvironmentId to int:", err)
-		return "exciting, unable to process direct facts"
-	}
-
-	if h.EnableDebug {
-		log.Print("[DEBUG] facts", directFacts)
-	}
-
-	apiClient := graphql.NewClient(h.LagoonAPI.Endpoint, &http.Client{Transport: &authedTransport{wrapped: http.DefaultTransport, h: h}})
-
-	factSources := map[string]string{}
-
-	processedFacts := make([]lagoonclient.AddFactInput, len(directFacts.Facts))
-	for i, fact := range directFacts.Facts {
-
-		vartypeString := FactTypeText
-		if fact.Type == FactTypeText || fact.Type == FactTypeSemver || fact.Type == FactTypeUrl {
-			vartypeString = fact.Type
-		}
-
-		processedFacts[i] = lagoonclient.AddFactInput{
-			Environment: environmentId,
-			Name:        fact.Name,
-			Value:       fact.Value,
-			Source:      fact.Source,
-			Description: fact.Description,
-			KeyFact:     false,
-			Type:        lagoonclient.FactType(vartypeString),
-			Category:    fact.Category,
-		}
-		factSources[fact.Source] = fact.Source
-	}
-
-	for _, s := range factSources {
-		_, err = lagoonclient.DeleteFactsFromSource(context.TODO(), apiClient, environmentId, s)
-		if err != nil {
-			log.Println(err)
-		}
-		log.Printf("Deleted facts on '%v:%v' for source %v", directFacts.ProjectName, directFacts.EnvironmentName, s)
-	}
-
-	facts, err := lagoonclient.AddFacts(context.TODO(), apiClient, processedFacts)
-	if err != nil {
-		log.Println(err)
-	}
-
-	return facts
 }
 
 // Incoming payload may contain facts or problems, so we need to handle these differently
