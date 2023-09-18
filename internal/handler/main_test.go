@@ -60,7 +60,7 @@ func Test_processingIncomingMessageQueue(t *testing.T) {
 }
 
 func Test_processDirectFacts(t *testing.T) {
-	err := godotenv.Load("../../.env")
+	err := godotenv.Load("../../.env.example")
 	if err != nil {
 		fmt.Println(err)
 		panic("Error loading .env file")
