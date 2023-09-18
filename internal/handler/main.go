@@ -199,35 +199,6 @@ type ResourceDestination struct {
 	Format      string
 }
 
-<<<<<<< HEAD
-// Messaging is used for the config and client information for the messaging queue.
-type Messaging struct {
-	Config                  mq.Config
-	LagoonAPI               LagoonAPI
-	S3Config                S3
-	ConnectionAttempts      int
-	ConnectionRetryInterval int
-	EnableDebug             bool
-	ProblemsFromSBOM        bool
-	GrypeBinaryLocation     string
-}
-
-// NewMessaging returns a messaging with config
-func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts int, startupInterval int, enableDebug bool, problemsFromSBOM bool, grypeBinaryLocation string) *Messaging {
-	return &Messaging{
-		Config:                  config,
-		LagoonAPI:               lagoonAPI,
-		S3Config:                s3,
-		ConnectionAttempts:      startupAttempts,
-		ConnectionRetryInterval: startupInterval,
-		EnableDebug:             enableDebug,
-		ProblemsFromSBOM:        problemsFromSBOM,
-		GrypeBinaryLocation:     grypeBinaryLocation,
-	}
-}
-
-=======
->>>>>>> main
 // Consumer handles consuming messages sent to the queue that this action handler is connected to and processes them accordingly
 func (h *Messaging) Consumer() {
 	var messageQueue mq.MQ
