@@ -17,10 +17,12 @@ type Messaging struct {
 	ConnectionAttempts      int
 	ConnectionRetryInterval int
 	EnableDebug             bool
+	ProblemsFromSBOM        bool
+	GrypeBinaryLocation     string
 }
 
 // NewMessaging returns a messaging with config
-func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts int, startupInterval int, enableDebug bool) *Messaging {
+func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts int, startupInterval int, enableDebug bool, problemsFromSBOM bool, grypeBinaryLocation string) *Messaging {
 	return &Messaging{
 		Config:                  config,
 		LagoonAPI:               lagoonAPI,
@@ -28,6 +30,8 @@ func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts 
 		ConnectionAttempts:      startupAttempts,
 		ConnectionRetryInterval: startupInterval,
 		EnableDebug:             enableDebug,
+		ProblemsFromSBOM:        problemsFromSBOM,
+		GrypeBinaryLocation:     grypeBinaryLocation,
 	}
 }
 
