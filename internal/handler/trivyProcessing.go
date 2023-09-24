@@ -38,30 +38,6 @@ var queue = sbomQueue{
 	Lock:  sync.Mutex{},
 }
 
-func SetUpQueue(messageHandler Messaging, grypeLocation string) {
-	queue.Lock.Lock()
-	defer queue.Lock.Unlock()
-	queue.GrypeLocation = grypeLocation
-	queue.Messaging = messageHandler
-}
-
-func SbomQueuePush(i sbomQueueItem) {
-	queue.Lock.Lock()
-	defer queue.Lock.Unlock()
-	queue.Items = append(queue.Items, i)
-}
-
-func sbomQueuePop() *sbomQueueItem {
-	if len(queue.Items) > 0 {
-		queue.Lock.Lock()
-		defer queue.Lock.Unlock()
-		i := queue.Items[0]
-		queue.Items = queue.Items[1:]
-		return &i
-	}
-	return nil
-}
-
 func SbomToProblems(trivyRemoteAddress string, bomWriteDirectory string, environmentId int, service string, sbom cyclonedx.BOM) error {
 	rep, err := executeProcessingTrivy(trivyRemoteAddress, bomWriteDirectory, sbom)
 	if err != nil {
@@ -81,35 +57,6 @@ func SbomToProblems(trivyRemoteAddress string, bomWriteDirectory string, environ
 	}
 
 	return nil
-}
-
-func processQueue() {
-	for {
-		i := sbomQueuePop()
-		if i != nil {
-			vulnerabilitiesBom, err := executeProcessing(queue.GrypeLocation, i.SBOM)
-			if err != nil {
-				fmt.Println("Unable to process queue item")
-				continue
-			}
-			problemArray, err := convertBOMToProblemsArray(i.EnvironmentId, problemSource, i.Service, vulnerabilitiesBom)
-			if err != nil {
-				fmt.Println("Unable to convert vulnerabilities list to problems array")
-				//fmt.Println(vulnerabilitiesBom)
-				fmt.Print(err)
-				continue
-			}
-			err = writeProblemsArrayToApi(i.EnvironmentId, problemSource, i.Service, problemArray)
-			if err != nil {
-				fmt.Println("Unable to write problemArray to API")
-				//fmt.Println(problemArray)
-				fmt.Print(err)
-				continue
-			}
-		} else {
-			time.Sleep(1 * time.Second)
-		}
-	}
 }
 
 func convertBOMToProblemsArray(environment int, source string, service string, bom cyclonedx.BOM) ([]lagoonclient.LagoonProblem, error) {
@@ -140,14 +87,15 @@ func convertBOMToProblemsArray(environment int, source string, service string, b
 
 			//TODO: this is gross, fix it.
 			p.Severity = lagoonclient.ProblemSeverityRating(strings.ToUpper(string((*v.Ratings)[0].Severity)))
+			var sevScore float64
 
-			sevScore := *(*v.Ratings)[0].Score
-
+			if (*v.Ratings)[0].Score != nil {
+				sevScore = *(*v.Ratings)[0].Score
+			}
 			if sevScore > 1 {
 				sevScore = sevScore / 10
 			}
-
-			p.SeverityScore = sevScore //*(*v.Ratings)[0].Score
+			p.SeverityScore = sevScore
 		}
 		ret = append(ret, p)
 	}

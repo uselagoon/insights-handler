@@ -12,46 +12,6 @@ import (
 	"testing"
 )
 
-func Test_executeProcessing(t *testing.T) {
-	type args struct {
-		bomLocation string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "test1",
-			args: args{bomLocation: "./testassets/grypeExecuteProcessing_test1.json"},
-		},
-	}
-
-	//Let's ensure that grype is available locally
-	grypePath := "./testassets/bin/trivy"
-	if _, err := os.Stat(grypePath); os.IsNotExist(err) {
-		t.Errorf("Grype not found at %v - please run `make gettestgrype`", grypePath)
-		return
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			bomText, _ := os.ReadFile(tt.args.bomLocation)
-			var bom cyclonedx.BOM
-			err := json.Unmarshal(bomText, &bom)
-			got, err := executeProcessing(grypePath, bom)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("executeProcessing() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			//we're just testing that there are vulnerabilities
-			if len(*got.Vulnerabilities) == 0 {
-				t.Errorf("Grype integration seems to be failing")
-			}
-		})
-	}
-}
-
 func Test_convertBOMToProblemsArray(t *testing.T) {
 	type args struct {
 		environment int

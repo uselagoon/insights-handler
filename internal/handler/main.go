@@ -202,6 +202,7 @@ type ResourceDestination struct {
 // Consumer handles consuming messages sent to the queue that this action handler is connected to and processes them accordingly
 func (h *Messaging) Consumer() {
 	var messageQueue mq.MQ
+
 	// if no mq is found when the goroutine starts, retry a few times before exiting
 	// default is 10 retry with 30 second delay = 5 minutes
 	err := try.Do(func(attempt int) (bool, error) {
