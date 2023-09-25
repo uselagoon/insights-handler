@@ -18,11 +18,11 @@ type Messaging struct {
 	ConnectionRetryInterval int
 	EnableDebug             bool
 	ProblemsFromSBOM        bool
-	GrypeBinaryLocation     string
+	TrivyServerEndpoint     string
 }
 
 // NewMessaging returns a messaging with config
-func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts int, startupInterval int, enableDebug bool, problemsFromSBOM bool, grypeBinaryLocation string) *Messaging {
+func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts int, startupInterval int, enableDebug bool, problemsFromSBOM bool, trivyServerEndpoint string) *Messaging {
 	return &Messaging{
 		Config:                  config,
 		LagoonAPI:               lagoonAPI,
@@ -31,7 +31,7 @@ func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts 
 		ConnectionRetryInterval: startupInterval,
 		EnableDebug:             enableDebug,
 		ProblemsFromSBOM:        problemsFromSBOM,
-		GrypeBinaryLocation:     grypeBinaryLocation,
+		TrivyServerEndpoint:     trivyServerEndpoint,
 	}
 }
 
@@ -39,7 +39,6 @@ func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts 
 func (h *Messaging) processMessageQueue(message mq.Message) {
 	var insights InsightsData
 	var resource ResourceDestination
-
 	// set up defer to ack the message after we're done processing
 	defer func(message mq.Message) {
 		// Ack to remove from queue
@@ -109,7 +108,19 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 	if insights.InputType != "" {
 		switch insights.InputType {
 		case "sbom", "sbom-gz":
+
 			insights.InsightsType = Sbom
+			// We actually want to decompress the payload here so that they're all processed the same way
+			//decodeGzipString(incoming.BinaryPayload[0])
+			//for n, d := range incoming.BinaryPayload {
+			//	// let's try and decompress the binary payload here
+			//	data, err := decodeGzipString(d)
+			//	// TODO: I think there may be a potential issue here if the type isn't gzip, so should probably test
+			//	if err != nil {
+			//
+			//	}
+			//}
+
 		case "image", "image-gz":
 			insights.InsightsType = Image
 		case "direct":

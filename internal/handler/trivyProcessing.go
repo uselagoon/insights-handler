@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/CycloneDX/cyclonedx-go"
+	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/aquasecurity/trivy/pkg/commands/artifact"
 	"github.com/aquasecurity/trivy/pkg/flag"
+	"github.com/aquasecurity/trivy/pkg/sbom/cyclonedx"
 	"github.com/aquasecurity/trivy/pkg/types"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient"
 	"io"
@@ -38,20 +39,21 @@ var queue = sbomQueue{
 	Lock:  sync.Mutex{},
 }
 
-func SbomToProblems(trivyRemoteAddress string, bomWriteDirectory string, environmentId int, service string, sbom cyclonedx.BOM) error {
+func SbomToProblems(trivyRemoteAddress string, bomWriteDirectory string, environmentId int, service string, sbom cdx.BOM) error {
 	rep, err := executeProcessingTrivy(trivyRemoteAddress, bomWriteDirectory, sbom)
+	fmt.Println("AAA")
 	if err != nil {
 		return err
 	}
 
 	problems, err := trivyReportToProblems(environmentId, problemSource, service, rep)
-
+	fmt.Println("BBB")
 	if err != nil {
 		return err
 	}
 
 	err = writeProblemsArrayToApi(environmentId, problemSource, service, problems)
-
+	fmt.Println("CCC")
 	if err != nil {
 		return err
 	}
@@ -59,7 +61,7 @@ func SbomToProblems(trivyRemoteAddress string, bomWriteDirectory string, environ
 	return nil
 }
 
-func convertBOMToProblemsArray(environment int, source string, service string, bom cyclonedx.BOM) ([]lagoonclient.LagoonProblem, error) {
+func convertBOMToProblemsArray(environment int, source string, service string, bom cdx.BOM) ([]lagoonclient.LagoonProblem, error) {
 	var ret []lagoonclient.LagoonProblem
 	if bom.Vulnerabilities == nil {
 		return ret, fmt.Errorf("No Vulnerabilities")
@@ -140,7 +142,7 @@ func testTrivyServerIsAlive(trivyRemoteAddress string) (bool, error) {
 	return body == "ok", nil
 }
 
-func executeProcessingTrivy(trivyRemoteAddress string, bomWriteDir string, bom cyclonedx.BOM) (types.Report, error) {
+func executeProcessingTrivy(trivyRemoteAddress string, bomWriteDir string, bom cdx.BOM) (types.Report, error) {
 	//first, we write this thing to disk
 	file, err := os.CreateTemp(bomWriteDir, "cycloneDX-*.json")
 	if err != nil {

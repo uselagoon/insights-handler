@@ -41,7 +41,7 @@ var (
 	disableAPIIntegration        bool
 	enableDebug                  bool
 	problemsFromSBOM             bool
-	grypeBinaryLocation          string
+	trivyServerEndpoint          string
 )
 
 func main() {
@@ -72,7 +72,9 @@ func main() {
 	flag.BoolVar(&disableAPIIntegration, "disable-api-integration", false, "Disable insights data integration for the Lagoon API")
 	flag.BoolVar(&enableDebug, "debug", false, "Enable debugging output")
 	flag.BoolVar(&problemsFromSBOM, "problems-from-sbom", false, "Pass any SBOM through Grype")
-	flag.StringVar(&grypeBinaryLocation, "grype-binary-location", "/usr/local/bin/grype", "Location of the Grype binary on disk")
+	flag.StringVar(&trivyServerEndpoint, "trivy-server-location", "http://localhost:4954", "Trivy server endpoint")
+
+	flag.Parse()
 
 	handler.EnableDebug = enableDebug
 
@@ -98,7 +100,7 @@ func main() {
 	disableAPIIntegration = getEnvBool("INSIGHTS_DISABLE_API_INTEGRATION", disableAPIIntegration)
 	disableS3Upload = getEnvBool("INSIGHTS_DISABLE_S3_UPLOAD", disableS3Upload)
 	problemsFromSBOM = getEnvBool("PROBLEMS_FROM_SBOM", problemsFromSBOM)
-	grypeBinaryLocation = getEnv("GRYPE_BINARY_LOCATION", grypeBinaryLocation)
+	trivyServerEndpoint = getEnv("TRIVY_SERVER_ENDPOINT", trivyServerEndpoint)
 
 	// configure the backup handler settings
 	broker := handler.RabbitBroker{
@@ -124,6 +126,12 @@ func main() {
 		Region:          s3Region,
 		UseSSL:          s3useSSL,
 		Disabled:        disableS3Upload,
+	}
+
+	if disableS3Upload == true {
+		fmt.Println("Disabled S3 upload is true")
+	} else {
+		fmt.Println("Disabled S3 upload is false")
 	}
 
 	log.Println("Registering Fact Filters/Transformer")
@@ -183,7 +191,7 @@ func main() {
 		startupConnectionInterval,
 		enableDebug,
 		problemsFromSBOM,
-		grypeBinaryLocation,
+		trivyServerEndpoint,
 	)
 
 	// start the consumer

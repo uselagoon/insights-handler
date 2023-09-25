@@ -61,15 +61,13 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 	}
 	source := fmt.Sprintf("insights:sbom:%s", resource.Service)
 
-	//// Add sbom onto processing queue
-	//
-	//SbomQueuePush(sbomQueueItem{
-	//	EnvironmentId: environment.Id,
-	//	Service:       "test",
-	//	SBOM:          *bom,
-	//})
-
-	//err :=  SbomToProblems()
+	// we process the SBOM here
+	if h.ProblemsFromSBOM == true {
+		err = SbomToProblems(h.TrivyServerEndpoint, "/tmp/", environment.Id, "insights-handler", *bom)
+		if err != nil {
+			return nil, "", err
+		}
+	}
 
 	// Process SBOM into facts
 	facts := processFactsFromSBOM(bom.Components, environment.Id, source)
