@@ -173,6 +173,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 			log.Println("only 'sbom', 'direct', 'raw', and 'image' types are currently supported for api processing")
 		} else {
 			err := h.sendToLagoonAPI(incoming, resource, insights)
+
 			if err != nil {
 				log.Printf("Unable to send to the api: %s", err.Error())
 			}
