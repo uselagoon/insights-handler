@@ -271,42 +271,81 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 
 	if insights.InputPayload == Payload {
 		for _, p := range incoming.Payload {
-			for _, filter := range parserFilters {
-				var result []interface{}
-				var source string
+			parserFilterLoopForPayloads(insights, p, h, apiClient, resource)
+		}
+	}
 
-				if insights.LagoonType == Facts {
-					json, err := json.Marshal(p)
-					if err != nil {
-						log.Println(fmt.Errorf(err.Error()))
-					}
-
-					result, source, err = filter(h, insights, fmt.Sprintf("%s", json), apiClient, resource)
-					if err != nil {
-						log.Println(fmt.Errorf(err.Error()))
-					}
-
-					for _, r := range result {
-						if fact, ok := r.(LagoonFact); ok {
-							// Handle single fact
-							err = h.sendFactsToLagoonAPI([]LagoonFact{fact}, apiClient, resource, source)
-							if err != nil {
-								fmt.Println(err)
-							}
-						} else if facts, ok := r.([]LagoonFact); ok {
-							// Handle slice of facts
-							h.sendFactsToLagoonAPI(facts, apiClient, resource, source)
-						} else {
-							// Unexpected type returned from filter()
-							log.Printf("unexpected type returned from filter(): %T\n", r)
-						}
-					}
-				}
-			}
+	if insights.InputPayload == BinaryPayload {
+		for _, p := range incoming.BinaryPayload {
+			parserFilterLoopForBinaryPayloads(insights, p, h, apiClient, resource)
 		}
 	}
 
 	return nil
+}
+
+func parserFilterLoopForBinaryPayloads(insights InsightsData, p string, h *Messaging, apiClient graphql.Client, resource ResourceDestination) {
+	for _, filter := range parserFilters {
+		
+		if insights.LagoonType == Facts { // This should be more or less trivially true
+
+			result, source, err := filter(h, insights, p, apiClient, resource)
+			if err != nil {
+				log.Println(fmt.Errorf(err.Error()))
+			}
+
+			for _, r := range result {
+				if fact, ok := r.(LagoonFact); ok {
+					// Handle single fact
+					err = h.sendFactsToLagoonAPI([]LagoonFact{fact}, apiClient, resource, source)
+					if err != nil {
+						fmt.Println(err)
+					}
+				} else if facts, ok := r.([]LagoonFact); ok {
+					// Handle slice of facts
+					h.sendFactsToLagoonAPI(facts, apiClient, resource, source)
+				} else {
+					// Unexpected type returned from filter()
+					log.Printf("unexpected type returned from filter(): %T\n", r)
+				}
+			}
+		}
+	}
+}
+
+func parserFilterLoopForPayloads(insights InsightsData, p PayloadInput, h *Messaging, apiClient graphql.Client, resource ResourceDestination) {
+	for _, filter := range parserFilters {
+		var result []interface{}
+		var source string
+
+		if insights.LagoonType == Facts { // This should be more or less trivially true
+			json, err := json.Marshal(p)
+			if err != nil {
+				log.Println(fmt.Errorf(err.Error()))
+			}
+
+			result, source, err = filter(h, insights, fmt.Sprintf("%s", json), apiClient, resource)
+			if err != nil {
+				log.Println(fmt.Errorf(err.Error()))
+			}
+
+			for _, r := range result {
+				if fact, ok := r.(LagoonFact); ok {
+					// Handle single fact
+					err = h.sendFactsToLagoonAPI([]LagoonFact{fact}, apiClient, resource, source)
+					if err != nil {
+						fmt.Println(err)
+					}
+				} else if facts, ok := r.([]LagoonFact); ok {
+					// Handle slice of facts
+					h.sendFactsToLagoonAPI(facts, apiClient, resource, source)
+				} else {
+					// Unexpected type returned from filter()
+					log.Printf("unexpected type returned from filter(): %T\n", r)
+				}
+			}
+		}
+	}
 }
 
 func (h *Messaging) sendFactsToLagoonAPI(facts []LagoonFact, apiClient graphql.Client, resource ResourceDestination, source string) error {
