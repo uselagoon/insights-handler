@@ -71,7 +71,7 @@ func main() {
 	flag.BoolVar(&disableS3Upload, "disable-s3-upload", false, "Disable uploading insights data to an s3 s3Bucket")
 	flag.BoolVar(&disableAPIIntegration, "disable-api-integration", false, "Disable insights data integration for the Lagoon API")
 	flag.BoolVar(&enableDebug, "debug", false, "Enable debugging output")
-	flag.BoolVar(&problemsFromSBOM, "problems-from-sbom", false, "Pass any SBOM through Grype")
+	flag.BoolVar(&problemsFromSBOM, "problems-from-sbom", true, "Pass any SBOM through Trivy")
 	flag.StringVar(&trivyServerEndpoint, "trivy-server-location", "http://localhost:4954", "Trivy server endpoint")
 
 	flag.Parse()
