@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/Khan/genqlient/graphql"
 	"github.com/aquasecurity/trivy/pkg/commands/artifact"
 	"github.com/aquasecurity/trivy/pkg/flag"
 	"github.com/aquasecurity/trivy/pkg/sbom/cyclonedx"
@@ -39,7 +40,7 @@ var queue = sbomQueue{
 	Lock:  sync.Mutex{},
 }
 
-func SbomToProblems(trivyRemoteAddress string, bomWriteDirectory string, environmentId int, service string, sbom cdx.BOM) error {
+func SbomToProblems(apiClient graphql.Client, trivyRemoteAddress string, bomWriteDirectory string, environmentId int, service string, sbom cdx.BOM) error {
 	fmt.Println("AAA")
 	rep, err := executeProcessingTrivy(trivyRemoteAddress, bomWriteDirectory, sbom)
 	if err != nil {
@@ -51,7 +52,7 @@ func SbomToProblems(trivyRemoteAddress string, bomWriteDirectory string, environ
 		return err
 	}
 	fmt.Println("CCC")
-	err = writeProblemsArrayToApi(environmentId, problemSource, service, problems)
+	err = writeProblemsArrayToApi(apiClient, environmentId, problemSource, service, problems)
 	if err != nil {
 		return err
 	}
@@ -101,7 +102,7 @@ func convertBOMToProblemsArray(environment int, source string, service string, b
 	return ret, nil
 }
 
-func writeProblemsArrayToApi(environment int, source string, service string, problems []lagoonclient.LagoonProblem) error {
+func writeProblemsArrayToApi(apiClient graphql.Client, environment int, source string, service string, problems []lagoonclient.LagoonProblem) error {
 
 	ret, err := lagoonclient.DeleteProblemsFromSource(context.TODO(), queue.Messaging.getApiClient(), environment, service, source)
 	if err != nil {
@@ -110,7 +111,7 @@ func writeProblemsArrayToApi(environment int, source string, service string, pro
 	fmt.Printf("Deleted problems from API for %v:%v - response: %v", service, source, ret)
 
 	//now we write the problems themselves
-	_, err = lagoonclient.AddProblems(context.TODO(), queue.Messaging.getApiClient(), problems)
+	_, err = lagoonclient.AddProblems(context.TODO(), apiClient, problems)
 
 	if err != nil {
 		return err

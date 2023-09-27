@@ -64,7 +64,7 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 	// we process the SBOM here
 	// BMK - this is likely not the appropriate place to call this
 	if h.ProblemsFromSBOM == true {
-		err = SbomToProblems(h.TrivyServerEndpoint, "/tmp/", environment.Id, "insights-handler", *bom)
+		err = SbomToProblems(apiClient, h.TrivyServerEndpoint, "/tmp/", environment.Id, "insights-handler", *bom)
 		if err != nil {
 			return nil, "", err
 		}
