@@ -40,21 +40,21 @@ var queue = sbomQueue{
 }
 
 func SbomToProblems(trivyRemoteAddress string, bomWriteDirectory string, environmentId int, service string, sbom cdx.BOM) error {
+	fmt.Println("AAA")
 	rep, err := executeProcessingTrivy(trivyRemoteAddress, bomWriteDirectory, sbom)
 	if err != nil {
 		return err
 	}
-
+	fmt.Println("BBB")
 	problems, err := trivyReportToProblems(environmentId, problemSource, service, rep)
 	if err != nil {
 		return err
 	}
-
+	fmt.Println("CCC")
 	err = writeProblemsArrayToApi(environmentId, problemSource, service, problems)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -264,6 +264,8 @@ func trivyReportToProblems(environment int, source string, service string, repor
 			ret = append(ret, p)
 		}
 	}
+	fmt.Println("Found the following problems:")
+	fmt.Println(ret)
 	return ret, nil
 }
 
