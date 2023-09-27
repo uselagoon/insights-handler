@@ -104,7 +104,7 @@ func convertBOMToProblemsArray(environment int, source string, service string, b
 
 func writeProblemsArrayToApi(apiClient graphql.Client, environment int, source string, service string, problems []lagoonclient.LagoonProblem) error {
 
-	ret, err := lagoonclient.DeleteProblemsFromSource(context.TODO(), queue.Messaging.getApiClient(), environment, service, source)
+	ret, err := lagoonclient.DeleteProblemsFromSource(context.TODO(), apiClient, environment, service, source)
 	if err != nil {
 		return err
 	}
