@@ -135,7 +135,7 @@ func Test_executeProcessingTrivy(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			// check if a server is available to run the test
-			serverUp, err := testTrivyServerIsAlive(tt.args.trivyRemoteAddress)
+			serverUp, err := IsTrivyServerIsAlive(tt.args.trivyRemoteAddress)
 
 			if err != nil {
 				t.Errorf("Unable to connect to trivy server: %v", err.Error())

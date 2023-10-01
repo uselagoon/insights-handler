@@ -8,53 +8,29 @@ import (
 	"github.com/Khan/genqlient/graphql"
 	"github.com/aquasecurity/trivy/pkg/commands/artifact"
 	"github.com/aquasecurity/trivy/pkg/flag"
-	"github.com/aquasecurity/trivy/pkg/sbom/cyclonedx"
 	"github.com/aquasecurity/trivy/pkg/types"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient"
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"strings"
-	"sync"
 	"time"
 )
 
 const problemSource = "insights-handler-grype"
 
-type sbomQueueItem struct {
-	EnvironmentId int
-	Service       string
-	SBOM          cyclonedx.BOM
-}
-
-type sbomQueue struct {
-	Items         []sbomQueueItem
-	Lock          sync.Mutex
-	GrypeLocation string
-	Messaging     Messaging
-}
-
-var queue = sbomQueue{
-	Items: []sbomQueueItem{},
-	Lock:  sync.Mutex{},
-}
-
 func SbomToProblems(apiClient graphql.Client, trivyRemoteAddress string, bomWriteDirectory string, environmentId int, service string, sbom cdx.BOM) error {
-	fmt.Println("AAA")
 	rep, err := executeProcessingTrivy(trivyRemoteAddress, bomWriteDirectory, sbom)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to execute trivy processing: %v", err.Error())
 	}
-	fmt.Println("BBB")
 	problems, err := trivyReportToProblems(environmentId, problemSource, service, rep)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to execute trivy processing - converting trivy report to problems: %v", err.Error())
 	}
-	fmt.Println("CCC")
 	err = writeProblemsArrayToApi(apiClient, environmentId, problemSource, service, problems)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to execute trivy processing- writing problems to api: %v", err.Error())
 	}
 	return nil
 }
@@ -85,7 +61,6 @@ func convertBOMToProblemsArray(environment int, source string, service string, b
 		//here we need to ensure that there are actually vulnerabilities
 		if v.Ratings != nil && len(*v.Ratings) > 0 {
 
-			//TODO: this is gross, fix it.
 			p.Severity = lagoonclient.ProblemSeverityRating(strings.ToUpper(string((*v.Ratings)[0].Severity)))
 			var sevScore float64
 
@@ -120,7 +95,7 @@ func writeProblemsArrayToApi(apiClient graphql.Client, environment int, source s
 	return nil
 }
 
-func testTrivyServerIsAlive(trivyRemoteAddress string) (bool, error) {
+func IsTrivyServerIsAlive(trivyRemoteAddress string) (bool, error) {
 	resp, err := http.Get(fmt.Sprintf("%v/healthz", trivyRemoteAddress))
 	if err != nil {
 		return false, err
@@ -253,7 +228,6 @@ func trivyReportToProblems(environment int, source string, service string, repor
 				Data:              "{}",
 				AssociatedPackage: "",
 				Description:       v.Vulnerability.Description,
-				// Severity:
 			}
 
 			if len(v.Vulnerability.References) > 0 {
@@ -267,82 +241,5 @@ func trivyReportToProblems(environment int, source string, service string, repor
 	}
 	fmt.Println("Found the following problems:")
 	fmt.Println(ret)
-	return ret, nil
-}
-
-func executeProcessing(grypeLocation string, bom cyclonedx.BOM) (cyclonedx.BOM, error) {
-	cmd := exec.Command(grypeLocation, "-o", "cyclonedx-json")
-	// Set up pipes for stdin, stdout, and stderr
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		fmt.Println("Failed to create stdin pipe:", err)
-		return cyclonedx.BOM{}, err
-	}
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		fmt.Println("Failed to create stdout pipe:", err)
-		return cyclonedx.BOM{}, err
-	}
-	defer stdout.Close()
-
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		fmt.Println("Failed to create stderr pipe:", err)
-		return cyclonedx.BOM{}, err
-	}
-	defer stderr.Close()
-
-	sbomString, err := json.Marshal(bom)
-	if err != nil {
-		return cyclonedx.BOM{}, err
-	}
-	//let's push the sbom into the stdin
-	if err := cmd.Start(); err != nil {
-		fmt.Println("Failed to start command:", err)
-		return cyclonedx.BOM{}, err
-	}
-
-	go func() {
-		defer stdin.Close()
-		_, err = io.WriteString(stdin, string(sbomString))
-	}()
-
-	if err != nil {
-		fmt.Println("Could not write to grype", err)
-		return cyclonedx.BOM{}, err
-	}
-
-	//execute
-	// Read from stdout
-	output := make([]byte, 0) // Buffer to store the output
-	buf := make([]byte, 1024) // Read buffer
-	for {
-		n, err := stdout.Read(buf)
-		if err != nil && err != io.EOF {
-			fmt.Println("Failed to read from stdout:", err)
-			return cyclonedx.BOM{}, err
-		}
-		if n == 0 {
-			break
-		}
-		output = append(output, buf[:n]...)
-	}
-
-	//fmt.Println("Output:", string(output))
-
-	// Wait for the command to finish
-	if err := cmd.Wait(); err != nil {
-		fmt.Println("Command execution failed:", err)
-		return cyclonedx.BOM{}, err
-	}
-
-	var ret cyclonedx.BOM
-	err = json.Unmarshal(output, &ret)
-	if err != nil {
-		fmt.Println("Unable to unmarshal data")
-		return ret, err
-	}
-
 	return ret, nil
 }

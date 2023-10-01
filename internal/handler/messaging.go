@@ -39,12 +39,34 @@ func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts 
 func (h *Messaging) processMessageQueue(message mq.Message) {
 	var insights InsightsData
 	var resource ResourceDestination
+
 	// set up defer to ack the message after we're done processing
+
 	defer func(message mq.Message) {
 		// Ack to remove from queue
 		err := message.Ack(false)
 		if err != nil {
 			fmt.Printf("Failed to acknowledge message: %s\n", err.Error())
+		}
+	}(message)
+
+	acknowledgeMessage := func(message mq.Message) func() {
+		return func() {
+			// Ack to remove from queue
+			err := message.Ack(false)
+			if err != nil {
+				fmt.Printf("Failed to acknowledge message: %s\n", err.Error())
+			}
+		}
+	}(message)
+
+	rejectMessage := func(message mq.Message) func(bool) {
+		return func(requeue bool) {
+			// Ack to remove from queue
+			err := message.Reject(requeue)
+			if err != nil {
+				fmt.Printf("Failed to requect message: %s\n", err.Error())
+			}
 		}
 	}(message)
 
@@ -56,6 +78,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 	if incoming.Type == "direct.facts" || incoming.Type == "direct.problems" {
 		resp := processItemsDirectly(message, h)
 		log.Println(resp)
+		acknowledgeMessage()
 		return
 	}
 
@@ -108,19 +131,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 	if insights.InputType != "" {
 		switch insights.InputType {
 		case "sbom", "sbom-gz":
-
 			insights.InsightsType = Sbom
-			// We actually want to decompress the payload here so that they're all processed the same way
-			//decodeGzipString(incoming.BinaryPayload[0])
-			//for n, d := range incoming.BinaryPayload {
-			//	// let's try and decompress the binary payload here
-			//	data, err := decodeGzipString(d)
-			//	// TODO: I think there may be a potential issue here if the type isn't gzip, so should probably test
-			//	if err != nil {
-			//
-			//	}
-			//}
-
 		case "image", "image-gz":
 			insights.InsightsType = Image
 		case "direct":
@@ -135,10 +146,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 		if h.EnableDebug {
 			log.Printf("[DEBUG] no payload was found")
 		}
-		err := message.Reject(false)
-		if err != nil {
-			fmt.Printf("Unable to reject payload: %s\n", err.Error())
-		}
+		rejectMessage(false)
 		return
 	}
 	if len(incoming.Payload) != 0 {
@@ -160,6 +168,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 			err := h.sendToLagoonS3(incoming, insights, resource)
 			if err != nil {
 				log.Printf("Unable to send to S3: %s", err.Error())
+				// TODO: do we reque here? Reject
 			}
 		}
 	}
@@ -176,7 +185,10 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 
 			if err != nil {
 				log.Printf("Unable to send to the api: %s", err.Error())
+				rejectMessage(false)
+				return
 			}
 		}
 	}
+	acknowledgeMessage()
 }
