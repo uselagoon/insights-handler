@@ -267,16 +267,16 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 	apiClient := h.getApiClient()
 
 	if resource.Project == "" && resource.Environment == "" {
-		log.Println("no resource definition labels could be found in payload (i.e. lagoon.sh/project or lagoon.sh/environment)")
+		return fmt.Errorf("no resource definition labels could be found in payload (i.e. lagoon.sh/project or lagoon.sh/environment)")
 	}
 
-	if insights.InputPayload == Payload {
+	if insights.InputPayload == Payload && insights.LagoonType == Facts {
 		for _, p := range incoming.Payload {
 			parserFilterLoopForPayloads(insights, p, h, apiClient, resource)
 		}
 	}
 
-	if insights.InputPayload == BinaryPayload {
+	if insights.InputPayload == BinaryPayload && insights.LagoonType == Facts {
 		for _, p := range incoming.BinaryPayload {
 			parserFilterLoopForBinaryPayloads(insights, p, h, apiClient, resource)
 		}
@@ -287,28 +287,25 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 
 func parserFilterLoopForBinaryPayloads(insights InsightsData, p string, h *Messaging, apiClient graphql.Client, resource ResourceDestination) {
 	for _, filter := range parserFilters {
-		
-		if insights.LagoonType == Facts { // This should be more or less trivially true
 
-			result, source, err := filter(h, insights, p, apiClient, resource)
-			if err != nil {
-				log.Println(fmt.Errorf(err.Error()))
-			}
+		result, source, err := filter(h, insights, p, apiClient, resource)
+		if err != nil {
+			log.Println(fmt.Errorf(err.Error()))
+		}
 
-			for _, r := range result {
-				if fact, ok := r.(LagoonFact); ok {
-					// Handle single fact
-					err = h.sendFactsToLagoonAPI([]LagoonFact{fact}, apiClient, resource, source)
-					if err != nil {
-						fmt.Println(err)
-					}
-				} else if facts, ok := r.([]LagoonFact); ok {
-					// Handle slice of facts
-					h.sendFactsToLagoonAPI(facts, apiClient, resource, source)
-				} else {
-					// Unexpected type returned from filter()
-					log.Printf("unexpected type returned from filter(): %T\n", r)
+		for _, r := range result {
+			if fact, ok := r.(LagoonFact); ok {
+				// Handle single fact
+				err = h.sendFactsToLagoonAPI([]LagoonFact{fact}, apiClient, resource, source)
+				if err != nil {
+					fmt.Println(err)
 				}
+			} else if facts, ok := r.([]LagoonFact); ok {
+				// Handle slice of facts
+				h.sendFactsToLagoonAPI(facts, apiClient, resource, source)
+			} else {
+				// Unexpected type returned from filter()
+				log.Printf("unexpected type returned from filter(): %T\n", r)
 			}
 		}
 	}
@@ -319,31 +316,29 @@ func parserFilterLoopForPayloads(insights InsightsData, p PayloadInput, h *Messa
 		var result []interface{}
 		var source string
 
-		if insights.LagoonType == Facts { // This should be more or less trivially true
-			json, err := json.Marshal(p)
-			if err != nil {
-				log.Println(fmt.Errorf(err.Error()))
-			}
+		json, err := json.Marshal(p)
+		if err != nil {
+			log.Println(fmt.Errorf(err.Error()))
+		}
 
-			result, source, err = filter(h, insights, fmt.Sprintf("%s", json), apiClient, resource)
-			if err != nil {
-				log.Println(fmt.Errorf(err.Error()))
-			}
+		result, source, err = filter(h, insights, fmt.Sprintf("%s", json), apiClient, resource)
+		if err != nil {
+			log.Println(fmt.Errorf(err.Error()))
+		}
 
-			for _, r := range result {
-				if fact, ok := r.(LagoonFact); ok {
-					// Handle single fact
-					err = h.sendFactsToLagoonAPI([]LagoonFact{fact}, apiClient, resource, source)
-					if err != nil {
-						fmt.Println(err)
-					}
-				} else if facts, ok := r.([]LagoonFact); ok {
-					// Handle slice of facts
-					h.sendFactsToLagoonAPI(facts, apiClient, resource, source)
-				} else {
-					// Unexpected type returned from filter()
-					log.Printf("unexpected type returned from filter(): %T\n", r)
+		for _, r := range result {
+			if fact, ok := r.(LagoonFact); ok {
+				// Handle single fact
+				err = h.sendFactsToLagoonAPI([]LagoonFact{fact}, apiClient, resource, source)
+				if err != nil {
+					fmt.Println(err)
 				}
+			} else if facts, ok := r.([]LagoonFact); ok {
+				// Handle slice of facts
+				h.sendFactsToLagoonAPI(facts, apiClient, resource, source)
+			} else {
+				// Unexpected type returned from filter()
+				log.Printf("unexpected type returned from filter(): %T\n", r)
 			}
 		}
 	}
