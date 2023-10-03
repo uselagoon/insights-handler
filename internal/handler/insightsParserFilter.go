@@ -62,9 +62,15 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 	source := fmt.Sprintf("insights:sbom:%s", resource.Service)
 
 	// we process the SBOM here
-	// BMK - this is likely not the appropriate place to call this
+
 	if h.ProblemsFromSBOM == true {
-		err = SbomToProblems(apiClient, h.TrivyServerEndpoint, "/tmp/", environment.Id, "insights-handler", *bom)
+		isAlive, err := IsTrivyServerIsAlive(h.TrivyServerEndpoint)
+		if err != nil {
+			return nil, "", fmt.Errorf("trivy server not alive: %v", err.Error())
+		}
+		if isAlive {
+			err = SbomToProblems(apiClient, h.TrivyServerEndpoint, "/tmp/", environment.Id, "insights-handler", *bom)
+		}
 		if err != nil {
 			return nil, "", err
 		}
