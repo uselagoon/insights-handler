@@ -102,6 +102,14 @@ func main() {
 	problemsFromSBOM = getEnvBool("PROBLEMS_FROM_SBOM", problemsFromSBOM)
 	trivyServerEndpoint = getEnv("TRIVY_SERVER_ENDPOINT", trivyServerEndpoint)
 
+	if problemsFromSBOM == true {
+		log.Println("PROBLEMS FROM SBOM - enabled")
+		if trivyServerEndpoint == "" {
+			log.Fatalf("NO TRIVY SERVER ENDPOINT SET - exiting")
+			os.Exit(1)
+		}
+	}
+
 	// configure the backup handler settings
 	broker := handler.RabbitBroker{
 		Hostname:     fmt.Sprintf("%s:%s", mqHost, mqPort),

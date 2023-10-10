@@ -42,13 +42,13 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 
 	// set up defer to ack the message after we're done processing
 
-	defer func(message mq.Message) {
-		// Ack to remove from queue
-		err := message.Ack(false)
-		if err != nil {
-			fmt.Printf("Failed to acknowledge message: %s\n", err.Error())
-		}
-	}(message)
+	//defer func(message mq.Message) {
+	//	// Ack to remove from queue
+	//	err := message.Ack(false)
+	//	if err != nil {
+	//		fmt.Printf("Failed to acknowledge message: %s\n", err.Error())
+	//	}
+	//}(message)
 
 	acknowledgeMessage := func(message mq.Message) func() {
 		return func() {

@@ -293,21 +293,7 @@ func parserFilterLoopForBinaryPayloads(insights InsightsData, p string, h *Messa
 			log.Println(fmt.Errorf(err.Error()))
 		}
 
-		for _, r := range result {
-			if fact, ok := r.(LagoonFact); ok {
-				// Handle single fact
-				err = h.sendFactsToLagoonAPI([]LagoonFact{fact}, apiClient, resource, source)
-				if err != nil {
-					fmt.Println(err)
-				}
-			} else if facts, ok := r.([]LagoonFact); ok {
-				// Handle slice of facts
-				h.sendFactsToLagoonAPI(facts, apiClient, resource, source)
-			} else {
-				// Unexpected type returned from filter()
-				log.Printf("unexpected type returned from filter(): %T\n", r)
-			}
-		}
+		processResultset(result, err, h, apiClient, resource, source)
 	}
 }
 
@@ -326,20 +312,25 @@ func parserFilterLoopForPayloads(insights InsightsData, p PayloadInput, h *Messa
 			log.Println(fmt.Errorf(err.Error()))
 		}
 
-		for _, r := range result {
-			if fact, ok := r.(LagoonFact); ok {
-				// Handle single fact
-				err = h.sendFactsToLagoonAPI([]LagoonFact{fact}, apiClient, resource, source)
-				if err != nil {
-					fmt.Println(err)
-				}
-			} else if facts, ok := r.([]LagoonFact); ok {
-				// Handle slice of facts
-				h.sendFactsToLagoonAPI(facts, apiClient, resource, source)
-			} else {
-				// Unexpected type returned from filter()
-				log.Printf("unexpected type returned from filter(): %T\n", r)
+		processResultset(result, err, h, apiClient, resource, source)
+	}
+}
+
+// processResultset will send results as facts to the lagoon api after processing via a parser filter
+func processResultset(result []interface{}, err error, h *Messaging, apiClient graphql.Client, resource ResourceDestination, source string) {
+	for _, r := range result {
+		if fact, ok := r.(LagoonFact); ok {
+			// Handle single fact
+			err = h.sendFactsToLagoonAPI([]LagoonFact{fact}, apiClient, resource, source)
+			if err != nil {
+				fmt.Println(err)
 			}
+		} else if facts, ok := r.([]LagoonFact); ok {
+			// Handle slice of facts
+			h.sendFactsToLagoonAPI(facts, apiClient, resource, source)
+		} else {
+			// Unexpected type returned from filter()
+			log.Printf("unexpected type returned from filter(): %T\n", r)
 		}
 	}
 }
@@ -390,11 +381,11 @@ func determineResourceFromLagoonAPI(apiClient graphql.Client, resource ResourceD
 	// Get project data (we need the project ID to be able to utilise the environmentByName query)
 	project, err := lagoonclient.GetProjectByName(context.TODO(), apiClient, resource.Project)
 	if err != nil {
-		return lagoonclient.Project{}, lagoonclient.Environment{}, fmt.Errorf("error: unable to determine resource destination (does %s:%s exist?)", resource.Project, resource.Environment)
+		return lagoonclient.Project{}, lagoonclient.Environment{}, fmt.Errorf("error: unable to determine resource destination (does %s:%s exist?): %v", resource.Project, resource.Environment, err.Error())
 	}
 
 	if project.Id == 0 || project.Name == "" {
-		return lagoonclient.Project{}, lagoonclient.Environment{}, fmt.Errorf("error: unable to determine resource destination (does %s:%s exist?)", resource.Project, resource.Environment)
+		return lagoonclient.Project{}, lagoonclient.Environment{}, fmt.Errorf("error: unable to determine resource destination (does %s:%s exist?): %v", resource.Project, resource.Environment, err.Error())
 	}
 
 	environment, err := lagoonclient.GetEnvironmentFromName(context.TODO(), apiClient, resource.Environment, project.Id)
