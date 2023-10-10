@@ -67,6 +67,8 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 		isAlive, err := IsTrivyServerIsAlive(h.TrivyServerEndpoint)
 		if err != nil {
 			return nil, "", fmt.Errorf("trivy server not alive: %v", err.Error())
+		} else {
+			fmt.Println("trivy is alive")
 		}
 		if isAlive {
 			err = SbomToProblems(apiClient, h.TrivyServerEndpoint, "/tmp/", environment.Id, "insights-handler", *bom)

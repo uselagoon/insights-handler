@@ -239,7 +239,7 @@ func trivyReportToProblems(environment int, source string, service string, repor
 			ret = append(ret, p)
 		}
 	}
-	fmt.Println("Found the following problems:")
-	fmt.Println(ret)
+	fmt.Printf("Found %v problems for environment %v", len(ret), environment)
+
 	return ret, nil
 }

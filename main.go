@@ -108,6 +108,8 @@ func main() {
 			log.Fatalf("NO TRIVY SERVER ENDPOINT SET - exiting")
 			os.Exit(1)
 		}
+	} else {
+		log.Println("PROBLEMS FROM SBOM - disabled")
 	}
 
 	// configure the backup handler settings
