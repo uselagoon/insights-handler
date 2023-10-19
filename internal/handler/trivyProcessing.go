@@ -83,7 +83,7 @@ func writeProblemsArrayToApi(apiClient graphql.Client, environment int, source s
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Deleted problems from API for %v:%v - response: %v", service, source, ret)
+	fmt.Printf("Deleted problems from API for %v:%v - response: %v\n", service, source, ret)
 
 	//now we write the problems themselves
 	_, err = lagoonclient.AddProblems(context.TODO(), apiClient, problems)
@@ -239,7 +239,7 @@ func trivyReportToProblems(environment int, source string, service string, repor
 			ret = append(ret, p)
 		}
 	}
-	fmt.Printf("Found %v problems for environment %v", len(ret), environment)
+	fmt.Printf("Found %v problems for environment %v\n", len(ret), environment)
 
 	return ret, nil
 }
