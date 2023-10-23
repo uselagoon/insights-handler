@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-const problemSource = "insights-handler-grype"
+const problemSource = "insights-handler-trivy"
 
 func SbomToProblems(apiClient graphql.Client, trivyRemoteAddress string, bomWriteDirectory string, environmentId int, service string, sbom cdx.BOM) error {
 	rep, err := executeProcessingTrivy(trivyRemoteAddress, bomWriteDirectory, sbom)
