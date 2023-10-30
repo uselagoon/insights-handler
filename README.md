@@ -12,7 +12,7 @@ and push to the api and s3 bucket.
     go run main.go \
         -rabbitmq-username guest \
         -rabbitmq-password guest \
-        -lagoon-api-host http://localhost:7070/graphql \
+        -lagoon-api-host http://localhost:8888/graphql \
         --jwt-token-signing-key secret  \
         --access-key-id minio \
         --secret-access-key minio123

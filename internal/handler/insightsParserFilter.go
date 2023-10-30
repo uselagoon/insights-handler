@@ -61,6 +61,23 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 	}
 	source := fmt.Sprintf("insights:sbom:%s", resource.Service)
 
+	// we process the SBOM here
+
+	if h.ProblemsFromSBOM == true {
+		isAlive, err := IsTrivyServerIsAlive(h.TrivyServerEndpoint)
+		if err != nil {
+			return nil, "", fmt.Errorf("trivy server not alive: %v", err.Error())
+		} else {
+			fmt.Println("trivy is alive")
+		}
+		if isAlive {
+			err = SbomToProblems(apiClient, h.TrivyServerEndpoint, "/tmp/", environment.Id, "insights-handler", *bom)
+		}
+		if err != nil {
+			return nil, "", err
+		}
+	}
+
 	// Process SBOM into facts
 	facts := processFactsFromSBOM(bom.Components, environment.Id, source)
 
@@ -74,6 +91,7 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 	}
 
 	log.Printf("Successfully decoded SBOM of image %s with %s, found %d for '%s:%s'", bom.Metadata.Component.Name, (*bom.Metadata.Tools)[0].Name, len(*bom.Components), resource.Project, resource.Environment)
+
 	return facts, source, nil
 }
 

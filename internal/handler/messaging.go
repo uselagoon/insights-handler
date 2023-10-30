@@ -17,10 +17,12 @@ type Messaging struct {
 	ConnectionAttempts      int
 	ConnectionRetryInterval int
 	EnableDebug             bool
+	ProblemsFromSBOM        bool
+	TrivyServerEndpoint     string
 }
 
 // NewMessaging returns a messaging with config
-func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts int, startupInterval int, enableDebug bool) *Messaging {
+func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts int, startupInterval int, enableDebug bool, problemsFromSBOM bool, trivyServerEndpoint string) *Messaging {
 	return &Messaging{
 		Config:                  config,
 		LagoonAPI:               lagoonAPI,
@@ -28,6 +30,8 @@ func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts 
 		ConnectionAttempts:      startupAttempts,
 		ConnectionRetryInterval: startupInterval,
 		EnableDebug:             enableDebug,
+		ProblemsFromSBOM:        problemsFromSBOM,
+		TrivyServerEndpoint:     trivyServerEndpoint,
 	}
 }
 
@@ -36,12 +40,23 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 	var insights InsightsData
 	var resource ResourceDestination
 
-	// set up defer to ack the message after we're done processing
-	defer func(message mq.Message) {
-		// Ack to remove from queue
-		err := message.Ack(false)
-		if err != nil {
-			fmt.Printf("Failed to acknowledge message: %s\n", err.Error())
+	acknowledgeMessage := func(message mq.Message) func() {
+		return func() {
+			// Ack to remove from queue
+			err := message.Ack(false)
+			if err != nil {
+				fmt.Printf("Failed to acknowledge message: %s\n", err.Error())
+			}
+		}
+	}(message)
+
+	rejectMessage := func(message mq.Message) func(bool) {
+		return func(requeue bool) {
+			// Ack to remove from queue
+			err := message.Reject(requeue)
+			if err != nil {
+				fmt.Printf("Failed to requect message: %s\n", err.Error())
+			}
 		}
 	}(message)
 
@@ -53,6 +68,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 	if incoming.Type == "direct.facts" || incoming.Type == "direct.problems" {
 		resp := processItemsDirectly(message, h)
 		log.Println(resp)
+		acknowledgeMessage()
 		return
 	}
 
@@ -120,10 +136,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 		if h.EnableDebug {
 			log.Printf("[DEBUG] no payload was found")
 		}
-		err := message.Reject(false)
-		if err != nil {
-			fmt.Printf("Unable to reject payload: %s\n", err.Error())
-		}
+		rejectMessage(false)
 		return
 	}
 	if len(incoming.Payload) != 0 {
@@ -145,6 +158,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 			err := h.sendToLagoonS3(incoming, insights, resource)
 			if err != nil {
 				log.Printf("Unable to send to S3: %s", err.Error())
+				// TODO: do we reque here? Reject
 			}
 		}
 	}
@@ -158,9 +172,13 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 			log.Println("only 'sbom', 'direct', 'raw', and 'image' types are currently supported for api processing")
 		} else {
 			err := h.sendToLagoonAPI(incoming, resource, insights)
+
 			if err != nil {
 				log.Printf("Unable to send to the api: %s", err.Error())
+				rejectMessage(false)
+				return
 			}
 		}
 	}
+	acknowledgeMessage()
 }

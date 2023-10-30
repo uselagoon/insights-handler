@@ -40,6 +40,8 @@ var (
 	disableS3Upload              bool
 	disableAPIIntegration        bool
 	enableDebug                  bool
+	problemsFromSBOM             bool
+	trivyServerEndpoint          string
 )
 
 func main() {
@@ -69,6 +71,9 @@ func main() {
 	flag.BoolVar(&disableS3Upload, "disable-s3-upload", false, "Disable uploading insights data to an s3 s3Bucket")
 	flag.BoolVar(&disableAPIIntegration, "disable-api-integration", false, "Disable insights data integration for the Lagoon API")
 	flag.BoolVar(&enableDebug, "debug", false, "Enable debugging output")
+	flag.BoolVar(&problemsFromSBOM, "problems-from-sbom", false, "Pass any SBOM through Trivy")
+	flag.StringVar(&trivyServerEndpoint, "trivy-server-location", "http://localhost:4954", "Trivy server endpoint")
+
 	flag.Parse()
 
 	handler.EnableDebug = enableDebug
@@ -94,6 +99,18 @@ func main() {
 	s3useSSL = getEnvBool("S3_USESSL", s3useSSL)
 	disableAPIIntegration = getEnvBool("INSIGHTS_DISABLE_API_INTEGRATION", disableAPIIntegration)
 	disableS3Upload = getEnvBool("INSIGHTS_DISABLE_S3_UPLOAD", disableS3Upload)
+	problemsFromSBOM = getEnvBool("PROBLEMS_FROM_SBOM", problemsFromSBOM)
+	trivyServerEndpoint = getEnv("TRIVY_SERVER_ENDPOINT", trivyServerEndpoint)
+
+	if problemsFromSBOM == true {
+		log.Println("PROBLEMS FROM SBOM - enabled")
+		if trivyServerEndpoint == "" {
+			log.Fatalf("NO TRIVY SERVER ENDPOINT SET - exiting")
+			os.Exit(1)
+		}
+	} else {
+		log.Println("PROBLEMS FROM SBOM - disabled")
+	}
 
 	// configure the backup handler settings
 	broker := handler.RabbitBroker{
@@ -119,6 +136,12 @@ func main() {
 		Region:          s3Region,
 		UseSSL:          s3useSSL,
 		Disabled:        disableS3Upload,
+	}
+
+	if disableS3Upload == true {
+		fmt.Println("Disabled S3 upload is true")
+	} else {
+		fmt.Println("Disabled S3 upload is false")
 	}
 
 	log.Println("Registering Fact Filters/Transformer")
@@ -177,6 +200,8 @@ func main() {
 		startupConnectionAttempts,
 		startupConnectionInterval,
 		enableDebug,
+		problemsFromSBOM,
+		trivyServerEndpoint,
 	)
 
 	// start the consumer
