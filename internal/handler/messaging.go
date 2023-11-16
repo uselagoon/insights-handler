@@ -39,7 +39,6 @@ func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts 
 func (h *Messaging) processMessageQueue(message mq.Message) {
 	var insights InsightsData
 	var resource ResourceDestination
-
 	acknowledgeMessage := func(message mq.Message) func() {
 		return func() {
 			// Ack to remove from queue
@@ -61,13 +60,32 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 	}(message)
 
 	incoming := &InsightsMessage{}
-	json.Unmarshal(message.Body(), incoming)
+	err := json.Unmarshal(message.Body(), incoming)
+
+	if err != nil {
+		fmt.Printf(err.Error())
+		acknowledgeMessage()
+		return
+	}
 
 	// if we have direct problems or facts, we process them differently - skipping all
 	// the extra processing below.
-	if incoming.Type == "direct.facts" || incoming.Type == "direct.problems" {
-		resp := processItemsDirectly(message, h)
-		log.Println(resp)
+	if incoming.Type == "direct.facts" {
+		resp := processFactsDirectly(message, h)
+		if h.EnableDebug {
+			log.Println(resp)
+		}
+		acknowledgeMessage()
+		return
+	}
+
+	if incoming.Type == "direct.problems" {
+		resp, _ := processProblemsDirectly(message, h)
+		if h.EnableDebug {
+			for _, d := range resp {
+				log.Println(d)
+			}
+		}
 		acknowledgeMessage()
 		return
 	}

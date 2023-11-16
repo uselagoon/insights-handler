@@ -1,0 +1,22 @@
+{
+  "projectName": "test6-drupal-example-simple",
+  "environment": 1236,
+  "environmentName": "test1copy",
+  "problems": [
+    {
+      "environment": 3,
+      "service": "cli",
+      "identifier": "testidentifier",
+      "version": "1.0.0",
+      "fixedVersion": "1.0.1",
+      "source": "insights:problems:cli",
+      "data": "Nothing to write home about",
+      "severityScore": 0.1,
+      "severity": "CRITICAL",
+      "description": "Test description"
+
+    }
+  ],
+  "type": "direct.problems",
+  "source": "insights:problems:cli"
+}

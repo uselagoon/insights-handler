@@ -13,12 +13,12 @@ import (
 
 // processing.go contains the functions that actually process the incoming messages
 
-func processItemsDirectly(message mq.Message, h *Messaging) string {
+func processFactsDirectly(message mq.Message, h *Messaging) string {
 	var directFacts DirectFacts
 	json.Unmarshal(message.Body(), &directFacts)
 	err := json.Unmarshal(message.Body(), &directFacts)
 	if err != nil {
-		log.Println("Error unmarshaling JSON:", err)
+		log.Println("Error unmarshaling JSON:", err.Error())
 		return "exciting, unable to process direct facts"
 	}
 
@@ -63,7 +63,7 @@ func processItemsDirectly(message mq.Message, h *Messaging) string {
 		if err != nil {
 			log.Println(err)
 		}
-		log.Printf("Deleted facts on '%v:%v' for source %v", directFacts.ProjectName, directFacts.EnvironmentName, s)
+		log.Printf("Deleted facts on '%v:%v' for source %v\n", directFacts.ProjectName, directFacts.EnvironmentName, s)
 	}
 
 	facts, err := lagoonclient.AddFacts(context.TODO(), apiClient, processedFacts)
@@ -72,4 +72,58 @@ func processItemsDirectly(message mq.Message, h *Messaging) string {
 	}
 
 	return facts
+}
+
+func processProblemsDirectly(message mq.Message, h *Messaging) ([]string, error) {
+	var directProblems DirectProblems
+	json.Unmarshal(message.Body(), &directProblems)
+	log.Println(directProblems)
+	err := json.Unmarshal(message.Body(), &directProblems)
+	if err != nil {
+		log.Println("Error unmarshaling JSON:", err)
+		return []string{}, err
+	}
+
+	if h.EnableDebug {
+		log.Print("[DEBUG] problems", directProblems)
+	}
+
+	apiClient := graphql.NewClient(h.LagoonAPI.Endpoint, &http.Client{Transport: &authedTransport{wrapped: http.DefaultTransport, h: h}})
+
+	// serviceSource just gives us simple structure to do the deletions
+	type serviceSource struct {
+		Source  string
+		Service string
+	}
+	problemSources := map[string]serviceSource{}
+
+	for i, problem := range directProblems.Problems {
+
+		// We want to ensure that the incoming problems aren't malformed or trying to do anything dodgy with env ids
+
+		if problem.Environment != directProblems.EnvironmentId {
+			directProblems.Problems[i].Environment = directProblems.EnvironmentId
+		}
+
+		problemSources[problem.Service+problem.Source] = serviceSource{
+			Source:  problem.Source,
+			Service: problem.Service,
+		}
+	}
+
+	for _, s := range problemSources {
+		_, err := lagoonclient.DeleteProblemsFromSource(context.TODO(), apiClient, directProblems.EnvironmentId, s.Service, s.Source)
+		if err != nil {
+			log.Println(err) //This could potentially mess up the state if we've already deleted source info, might
+			return []string{}, err
+		}
+		log.Printf("Deleted Problems on '%v:%v' for source %v\n", directProblems.ProjectName, directProblems.EnvironmentName, s)
+	}
+
+	resptext, err := lagoonclient.AddProblems(context.TODO(), apiClient, directProblems.Problems)
+	if err != nil {
+		log.Println(err)
+	}
+
+	return resptext, nil
 }
