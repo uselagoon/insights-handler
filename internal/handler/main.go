@@ -97,6 +97,13 @@ type DirectFacts struct {
 	InsightsType    string       `json:"insightsType"`
 }
 
+type DirectProblems struct {
+	EnvironmentId   int                          `json:"environment"`
+	ProjectName     string                       `json:"projectName"`
+	EnvironmentName string                       `json:"environmentName"`
+	Problems        []lagoonclient.LagoonProblem `json:"problems"`
+	Type            string                       `json:"type"`
+}
 type InsightsData struct {
 	InputType               string
 	InputPayload            PayloadType

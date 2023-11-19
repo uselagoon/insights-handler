@@ -74,7 +74,7 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 			logger.Debug("Trivy is reachable")
 		}
 		if isAlive {
-			err = SbomToProblems(apiClient, h.TrivyServerEndpoint, "/tmp/", environment.Id, "insights-handler", *bom)
+			err = SbomToProblems(apiClient, h.TrivyServerEndpoint, "/tmp/", environment.Id, resource.Service, *bom)
 		}
 		if err != nil {
 			return nil, "", err

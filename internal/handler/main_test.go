@@ -123,13 +123,13 @@ func Test_processDirectFacts(t *testing.T) {
 
 			fmt.Println(string(message.Body()))
 
-			got := processItemsDirectly(tt.args.message, tt.args.h)
+			got := processFactsDirectly(tt.args.message, tt.args.h)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("processItemsDirectly() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("processFactsDirectly() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("processItemsDirectly() got = %v, want %v", got, tt.want)
+				t.Errorf("processFactsDirectly() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
