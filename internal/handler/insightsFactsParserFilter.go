@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
+	"log/slog"
 	"strings"
 
 	"github.com/Khan/genqlient/graphql"
@@ -16,6 +16,8 @@ type FactsPayload struct {
 
 // Processes facts from insights payloads that come from reconcilled kubernetes payloads (e.g. include labels/annotations and compressed/encoded data)
 func processFactsInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonFact, string, error) {
+	source := fmt.Sprintf("insights:facts:%s", resource.Service)
+	logger := slog.With("Project", resource.Project, "Environment", resource.Environment, "Source", source)
 	if insights.LagoonType == Facts && insights.InsightsType == Raw {
 		r := strings.NewReader(v)
 
@@ -26,9 +28,7 @@ func processFactsInsightsData(h *Messaging, insights InsightsData, v string, api
 			fmt.Println("err: ", err)
 		}
 
-		source := fmt.Sprintf("insights:facts:%s", resource.Service)
-
-		facts := processFactsFromJSON(res, source)
+		facts := processFactsFromJSON(logger, res, source)
 		facts, err = KeyFactsFilter(facts)
 		if err != nil {
 			return nil, "", err
@@ -38,20 +38,21 @@ func processFactsInsightsData(h *Messaging, insights InsightsData, v string, api
 			return nil, "", fmt.Errorf("no facts to process")
 		}
 
-		log.Printf("Successfully processed %d fact(s), for '%s:%s', from source '%s'", len(facts), resource.Project, resource.Environment, source)
+		//log.Printf("Successfully processed %d fact(s), for '%s:%s', from source '%s'", len(facts), resource.Project, resource.Environment, source)
+		logger.Info("Successfully processed facts", "number", len(facts))
 
 		return facts, source, nil
 	}
 	return nil, "", nil
 }
 
-func processFactsFromJSON(facts []byte, source string) []LagoonFact {
+func processFactsFromJSON(logger *slog.Logger, facts []byte, source string) []LagoonFact {
 	var factsInput []LagoonFact
 
 	var factsPayload FactsPayload
 	err := json.Unmarshal(facts, &factsPayload)
 	if err != nil {
-		fmt.Println(err.Error())
+		logger.Error(err.Error())
 		panic("Can't unmarshal facts")
 	}
 
@@ -80,9 +81,7 @@ func processFactsFromJSON(facts []byte, source string) []LagoonFact {
 			KeyFact:     f.KeyFact,
 			Type:        FactTypeText,
 		}
-		if EnableDebug {
-			log.Println("[DEBUG] processing fact name " + f.Name)
-		}
+		logger.Debug("Processing fact", "name", f.Name, "value", f.Value)
 		fact, _ = ProcessLagoonFactAgainstRegisteredFilters(fact, f)
 		factsInput = append(factsInput, fact)
 	}

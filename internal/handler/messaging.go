@@ -2,9 +2,9 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/cheshir/go-mq"
 	"log"
+	"log/slog"
 	"sort"
 	"strconv"
 )
@@ -45,7 +45,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 			// Ack to remove from queue
 			err := message.Ack(false)
 			if err != nil {
-				fmt.Printf("Failed to acknowledge message: %s\n", err.Error())
+				slog.Error("Failed to acknowledge message", "Error", err.Error())
 			}
 		}
 	}(message)
@@ -55,7 +55,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 			// Ack to remove from queue
 			err := message.Reject(requeue)
 			if err != nil {
-				fmt.Printf("Failed to requect message: %s\n", err.Error())
+				slog.Error("Failed to reject message", "Error", err.Error())
 			}
 		}
 	}(message)
@@ -67,7 +67,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 	// the extra processing below.
 	if incoming.Type == "direct.facts" || incoming.Type == "direct.problems" {
 		resp := processItemsDirectly(message, h)
-		log.Println(resp)
+		slog.Info(resp)
 		acknowledgeMessage()
 		return
 	}

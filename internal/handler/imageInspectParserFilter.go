@@ -3,7 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 
 	"github.com/Khan/genqlient/graphql"
@@ -24,18 +24,18 @@ type ImageData struct {
 }
 
 func processImageInspectInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonFact, string, error) {
+	source := fmt.Sprintf("insights:image:%s", resource.Service)
+	logger := slog.With("Project", resource.Project, "Environment", resource.Environment, "Source", source)
 	if insights.InsightsType == Image {
 		decoded, err := decodeGzipString(v)
 		if err != nil {
-			fmt.Errorf(err.Error())
+			return nil, "", err
 		}
 
 		_, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
 		if apiErr != nil {
 			return nil, "", apiErr
 		}
-
-		source := fmt.Sprintf("insights:image:%s", resource.Service)
 
 		marshallDecoded, err := json.Marshal(decoded)
 		var imageInspect ImageData
@@ -45,12 +45,11 @@ func processImageInspectInsightsData(h *Messaging, insights InsightsData, v stri
 			return nil, "", err
 		}
 
-		facts, err := processFactsFromImageInspect(imageInspect, environment.Id, source)
+		facts, err := processFactsFromImageInspect(logger, imageInspect, environment.Id, source)
 		if err != nil {
 			return nil, "", err
 		}
-		log.Printf("Successfully decoded image-inspect, for '%s:%s', from '%s'", resource.Project, resource.Environment, source)
-
+		logger.Info("Successfully decoded image-inspect")
 		facts, err = KeyFactsFilter(facts)
 		if err != nil {
 			return nil, "", err
@@ -61,7 +60,8 @@ func processImageInspectInsightsData(h *Messaging, insights InsightsData, v stri
 	return []LagoonFact{}, "", nil
 }
 
-func processFactsFromImageInspect(imageInspectData ImageData, id int, source string) ([]LagoonFact, error) {
+func processFactsFromImageInspect(logger *slog.Logger, imageInspectData ImageData, id int, source string) ([]LagoonFact, error) {
+
 	var factsInput []LagoonFact
 
 	var filteredFacts []EnvironmentVariable
@@ -95,9 +95,9 @@ func processFactsFromImageInspect(imageInspectData ImageData, id int, source str
 			KeyFact:     false,
 			Type:        FactTypeText,
 		}
-		if EnableDebug {
-			log.Println("[DEBUG] processing fact name " + f.Key)
-		}
+
+		logger.Debug("Processing fact", "name", f.Key, "value", f.Value)
+
 		fact, _ = ProcessLagoonFactAgainstRegisteredFilters(fact, f)
 		factsInput = append(factsInput, fact)
 	}
