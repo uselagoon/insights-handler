@@ -11,6 +11,7 @@ import (
 	"github.com/aquasecurity/trivy/pkg/types"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -83,7 +84,12 @@ func writeProblemsArrayToApi(apiClient graphql.Client, environment int, source s
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Deleted problems from API for %v:%v - response: %v\n", service, source, ret)
+	//fmt.Printf("Deleted problems from API for %v:%v - response: %v\n", service, source, ret)
+	slog.Info("Deleted problems from API",
+		"Service", service,
+		"Source", source,
+		"Return Data", ret,
+	)
 
 	//now we write the problems themselves
 	_, err = lagoonclient.AddProblems(context.TODO(), apiClient, problems)
@@ -239,7 +245,12 @@ func trivyReportToProblems(environment int, source string, service string, repor
 			ret = append(ret, p)
 		}
 	}
-	fmt.Printf("Found %v problems for environment %v\n", len(ret), environment)
+	//fmt.Printf("Found %v problems for environment %v\n", len(ret), environment)
+	slog.Info("Found problems",
+		"EnvironmentId", environment,
+		"Source", source,
+		"Number", len(ret),
+	)
 
 	return ret, nil
 }

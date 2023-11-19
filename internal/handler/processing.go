@@ -7,6 +7,7 @@ import (
 	"github.com/cheshir/go-mq"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient"
 	"log"
+	"log/slog"
 	"net/http"
 	"strconv"
 )
@@ -15,23 +16,26 @@ import (
 
 func processFactsDirectly(message mq.Message, h *Messaging) string {
 	var directFacts DirectFacts
+
 	json.Unmarshal(message.Body(), &directFacts)
 	err := json.Unmarshal(message.Body(), &directFacts)
 	if err != nil {
-		log.Println("Error unmarshaling JSON:", err.Error())
+		slog.Error("Could not unmarshal data", "Error", err.Error())
 		return "exciting, unable to process direct facts"
 	}
 
-	// since its useful to allow int and string json definitions, we need to convert strings here to ints.
+	// since it's useful to allow int and string json definitions, we need to convert strings here to ints.
 	environmentId, err := strconv.Atoi(directFacts.EnvironmentId.String())
 	if err != nil {
-		log.Println("Error converting EnvironmentId to int:", err)
+		slog.Error("Error converting EnvironmentId to int", "Error", err)
 		return "exciting, unable to process direct facts"
 	}
 
-	if h.EnableDebug {
-		log.Print("[DEBUG] facts", directFacts)
-	}
+	//if h.EnableDebug {
+	//	log.Print("[DEBUG] facts", directFacts)
+	//}
+	//
+	slog.Debug("Facts info", "data", directFacts)
 
 	apiClient := graphql.NewClient(h.LagoonAPI.Endpoint, &http.Client{Transport: &authedTransport{wrapped: http.DefaultTransport, h: h}})
 
@@ -61,14 +65,26 @@ func processFactsDirectly(message mq.Message, h *Messaging) string {
 	for _, s := range factSources {
 		_, err = lagoonclient.DeleteFactsFromSource(context.TODO(), apiClient, environmentId, s)
 		if err != nil {
-			log.Println(err)
+
+			slog.Error("Error deleting facts from source",
+				"Project", directFacts.ProjectName,
+				"Environment", directFacts.EnvironmentName,
+				"Source", s,
+				"Error", err,
+			)
 		}
-		log.Printf("Deleted facts on '%v:%v' for source %v\n", directFacts.ProjectName, directFacts.EnvironmentName, s)
+		//log.Printf("Deleted facts on '%v:%v' for source %v\n", directFacts.ProjectName, directFacts.EnvironmentName, s)
+		slog.Info("Deleted facts",
+			"Project", directFacts.ProjectName,
+			"Environment", directFacts.EnvironmentName,
+			"Source", s,
+		)
 	}
 
 	facts, err := lagoonclient.AddFacts(context.TODO(), apiClient, processedFacts)
 	if err != nil {
-		log.Println(err)
+		//log.Println(err)
+		slog.Error("Issue adding facts", "Error", err.Error())
 	}
 
 	return facts
@@ -80,13 +96,12 @@ func processProblemsDirectly(message mq.Message, h *Messaging) ([]string, error)
 	log.Println(directProblems)
 	err := json.Unmarshal(message.Body(), &directProblems)
 	if err != nil {
-		log.Println("Error unmarshaling JSON:", err)
+		//log.Println("Error unmarshaling JSON:", err)
+		slog.Error("Could not unmarshal JSON", "Error", err)
 		return []string{}, err
 	}
 
-	if h.EnableDebug {
-		log.Print("[DEBUG] problems", directProblems)
-	}
+	slog.Debug("Problems data", "data", directProblems)
 
 	apiClient := graphql.NewClient(h.LagoonAPI.Endpoint, &http.Client{Transport: &authedTransport{wrapped: http.DefaultTransport, h: h}})
 
@@ -114,15 +129,19 @@ func processProblemsDirectly(message mq.Message, h *Messaging) ([]string, error)
 	for _, s := range problemSources {
 		_, err := lagoonclient.DeleteProblemsFromSource(context.TODO(), apiClient, directProblems.EnvironmentId, s.Service, s.Source)
 		if err != nil {
-			log.Println(err) //This could potentially mess up the state if we've already deleted source info, might
 			return []string{}, err
 		}
 		log.Printf("Deleted Problems on '%v:%v' for source %v\n", directProblems.ProjectName, directProblems.EnvironmentName, s)
+		slog.Info("Deleted problems",
+			"Project", directProblems.ProjectName,
+			"Environment", directProblems.EnvironmentName,
+			"Source", s,
+		)
 	}
 
 	resptext, err := lagoonclient.AddProblems(context.TODO(), apiClient, directProblems.Problems)
 	if err != nil {
-		log.Println(err)
+		return []string{}, err
 	}
 
 	return resptext, nil
