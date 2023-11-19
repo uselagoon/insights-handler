@@ -25,7 +25,7 @@ func processFactsInsightsData(h *Messaging, insights InsightsData, v string, api
 		//dec := base64.NewDecoder(base64.StdEncoding, r)
 		res, err := ioutil.ReadAll(r)
 		if err != nil {
-			fmt.Println("err: ", err)
+			slog.Error("Error reading insights data", "Error", err)
 		}
 
 		facts := processFactsFromJSON(logger, res, source)

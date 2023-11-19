@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/cheshir/go-mq"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/handler"
-	"log"
 	"log/slog"
 	"os"
 	"strconv"
@@ -109,6 +108,7 @@ func main() {
 	if enableDebug {
 		debugLevel = slog.LevelDebug
 	}
+
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: debugLevel,
 	})))
@@ -151,7 +151,8 @@ func main() {
 
 	err := handler.RegisterFiltersFromDisk(filterTransformerFile)
 	if err != nil {
-		log.Println(err)
+		// TODO: BETTER ERROR HANDLING
+		slog.Error("Unable to register filters from disk", "Error", err)
 	}
 
 	config := mq.Config{

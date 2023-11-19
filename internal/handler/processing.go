@@ -6,7 +6,6 @@ import (
 	"github.com/Khan/genqlient/graphql"
 	"github.com/cheshir/go-mq"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient"
-	"log"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -93,10 +92,8 @@ func processFactsDirectly(message mq.Message, h *Messaging) string {
 func processProblemsDirectly(message mq.Message, h *Messaging) ([]string, error) {
 	var directProblems DirectProblems
 	json.Unmarshal(message.Body(), &directProblems)
-	log.Println(directProblems)
 	err := json.Unmarshal(message.Body(), &directProblems)
 	if err != nil {
-		//log.Println("Error unmarshaling JSON:", err)
 		slog.Error("Could not unmarshal JSON", "Error", err)
 		return []string{}, err
 	}
@@ -131,7 +128,7 @@ func processProblemsDirectly(message mq.Message, h *Messaging) ([]string, error)
 		if err != nil {
 			return []string{}, err
 		}
-		log.Printf("Deleted Problems on '%v:%v' for source %v\n", directProblems.ProjectName, directProblems.EnvironmentName, s)
+
 		slog.Info("Deleted problems",
 			"Project", directProblems.ProjectName,
 			"Environment", directProblems.EnvironmentName,

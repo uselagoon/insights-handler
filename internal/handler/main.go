@@ -447,7 +447,7 @@ func (h *Messaging) sendToLagoonS3(incoming *InsightsMessage, insights InsightsD
 			return err
 		}
 	} else {
-		log.Printf("Successfully created %s", h.S3Config.Bucket)
+		slog.Info(fmt.Sprintf("Successfully created %s", h.S3Config.Bucket))
 	}
 
 	if len(incoming.Payload) != 0 {
@@ -466,14 +466,14 @@ func (h *Messaging) sendToLagoonS3(incoming *InsightsMessage, insights InsightsD
 			return putObjErr
 		}
 
-		log.Printf("Successfully uploaded %s of size %d", objectName, info.Size)
+		slog.Info(fmt.Sprintf("Successfully uploaded %s of size %d", objectName, info.Size))
 	}
 
 	if len(incoming.BinaryPayload) != 0 {
 		for _, p := range incoming.BinaryPayload {
 			result, err := decodeGzipString(p)
 			if err != nil {
-				fmt.Errorf(err.Error())
+				return err
 			}
 			resultJson, _ := json.MarshalIndent(result, "", " ")
 
@@ -491,7 +491,7 @@ func (h *Messaging) sendToLagoonS3(incoming *InsightsMessage, insights InsightsD
 			if insights.OutputCompressed != true {
 				err = ioutil.WriteFile(tempFilePath, resultJson, 0644)
 				if err != nil {
-					fmt.Errorf(err.Error())
+					return err
 				}
 			} else {
 				var buf bytes.Buffer
@@ -500,7 +500,7 @@ func (h *Messaging) sendToLagoonS3(incoming *InsightsMessage, insights InsightsD
 				gz.Close()
 				err = ioutil.WriteFile(tempFilePath, buf.Bytes(), 0644)
 				if err != nil {
-					fmt.Errorf(err.Error())
+					return err
 				}
 			}
 
@@ -510,13 +510,13 @@ func (h *Messaging) sendToLagoonS3(incoming *InsightsMessage, insights InsightsD
 				ContentEncoding: contentEncoding,
 			})
 			if err != nil {
-				fmt.Errorf(err.Error())
+				return err
 			}
-			log.Printf("Successfully uploaded %s of size %d\n", s3FilePath, info.Size)
+			slog.Info(fmt.Sprintf("Successfully uploaded %s of size %d\n", s3FilePath, info.Size))
 
 			err = os.Remove(tempFilePath)
 			if err != nil {
-				fmt.Errorf(err.Error())
+				return err
 			}
 		}
 	}
@@ -532,10 +532,6 @@ func (h *Messaging) pushFactsToLagoonApi(facts []LagoonFact, resource ResourceDe
 		"Environment", resource.Environment,
 	)
 	apiClient := graphql.NewClient(h.LagoonAPI.Endpoint, &http.Client{Transport: &authedTransport{wrapped: http.DefaultTransport, h: h}})
-
-	//if EnableDebug {
-	//	log.Printf("[DEBUG] attempting to add %d fact(s)...", len(facts))
-	//}
 
 	slog.Debug("Attempting to add facts",
 		"Number", len(facts),
@@ -568,7 +564,9 @@ func (h *Messaging) pushFactsToLagoonApi(facts []LagoonFact, resource ResourceDe
 		}
 	}
 
-	log.Println(result)
+	logger.Debug("Response from API",
+		"result", result,
+	)
 	return nil
 }
 
