@@ -25,7 +25,7 @@ type ImageData struct {
 
 func processImageInspectInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonFact, string, error) {
 	source := fmt.Sprintf("insights:image:%s", resource.Service)
-	logger := slog.With("Project", resource.Project, "Environment", resource.Environment, "Source", source)
+	logger := slog.With("ProjectName", resource.Project, "EnvironmentName", resource.Environment, "Source", source)
 	if insights.InsightsType == Image {
 		decoded, err := decodeGzipString(v)
 		if err != nil {

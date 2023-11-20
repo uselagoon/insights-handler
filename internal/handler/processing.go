@@ -66,16 +66,18 @@ func processFactsDirectly(message mq.Message, h *Messaging) string {
 		if err != nil {
 
 			slog.Error("Error deleting facts from source",
-				"Project", directFacts.ProjectName,
-				"Environment", directFacts.EnvironmentName,
+				"EnvironmentId", directFacts.EnvironmentId,
+				"ProjectName", directFacts.ProjectName,
+				"EnvironmentName", directFacts.EnvironmentName,
 				"Source", s,
 				"Error", err,
 			)
 		}
 		//log.Printf("Deleted facts on '%v:%v' for source %v\n", directFacts.ProjectName, directFacts.EnvironmentName, s)
 		slog.Info("Deleted facts",
-			"Project", directFacts.ProjectName,
-			"Environment", directFacts.EnvironmentName,
+			"EnvironmentId", directFacts.EnvironmentId,
+			"ProjectName", directFacts.ProjectName,
+			"EnvironmentName", directFacts.EnvironmentName,
 			"Source", s,
 		)
 	}
@@ -130,8 +132,9 @@ func processProblemsDirectly(message mq.Message, h *Messaging) ([]string, error)
 		}
 
 		slog.Info("Deleted problems",
-			"Project", directProblems.ProjectName,
-			"Environment", directProblems.EnvironmentName,
+			"EnvironmentId", directProblems.EnvironmentId,
+			"ProjectName", directProblems.ProjectName,
+			"EnvironmentName", directProblems.EnvironmentName,
 			"Source", s,
 		)
 	}

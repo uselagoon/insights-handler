@@ -361,8 +361,9 @@ func (h *Messaging) sendFactsToLagoonAPI(facts []LagoonFact, apiClient graphql.C
 
 	slog.Debug("Matched facts",
 		"Number", len(facts),
-		"Project", project.Name,
-		"Environment", environment,
+		"ProjectName", project.Name,
+		"EnvironmentId", environment.Id,
+		"EnvironmentName", environment.Name,
 		"Source", source,
 	)
 
@@ -392,8 +393,10 @@ func (h *Messaging) deleteExistingFactsBySource(apiClient graphql.Client, enviro
 
 	//log.Printf("Previous facts deleted for '%s:%s' and source '%s'", project.Name, environment.Name, source)
 	slog.Info("Previous facts deleted",
-		"Project", project.Name,
-		"Environment", environment,
+		"ProjectId", project.Id,
+		"ProjectName", project.Name,
+		"EnvironmentId", environment.Id,
+		"EnvironmentName", environment.Name,
 		"Source", source,
 	)
 
@@ -528,8 +531,8 @@ func (h *Messaging) sendToLagoonS3(incoming *InsightsMessage, insights InsightsD
 func (h *Messaging) pushFactsToLagoonApi(facts []LagoonFact, resource ResourceDestination) error {
 
 	logger := slog.With(
-		"Project", resource.Project,
-		"Environment", resource.Environment,
+		"ProjectName", resource.Project,
+		"EnvironmentName", resource.Environment,
 	)
 	apiClient := graphql.NewClient(h.LagoonAPI.Endpoint, &http.Client{Transport: &authedTransport{wrapped: http.DefaultTransport, h: h}})
 

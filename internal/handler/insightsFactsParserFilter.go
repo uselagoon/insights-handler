@@ -17,7 +17,7 @@ type FactsPayload struct {
 // Processes facts from insights payloads that come from reconcilled kubernetes payloads (e.g. include labels/annotations and compressed/encoded data)
 func processFactsInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonFact, string, error) {
 	source := fmt.Sprintf("insights:facts:%s", resource.Service)
-	logger := slog.With("Project", resource.Project, "Environment", resource.Environment, "Source", source)
+	logger := slog.With("ProjectName", resource.Project, "EnvironmentName", resource.Environment, "Source", source)
 	if insights.LagoonType == Facts && insights.InsightsType == Raw {
 		r := strings.NewReader(v)
 

@@ -155,8 +155,6 @@ func executeProcessingTrivy(trivyRemoteAddress string, bomWriteDir string, bom c
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1000)
 	defer cancel()
 
-	aqualog.InitLogger(false, true)
-
 	opts := flag.Options{
 		GlobalOptions: flag.GlobalOptions{
 			ConfigFile: "trivy.yaml",
@@ -255,4 +253,10 @@ func trivyReportToProblems(environment int, source string, service string, repor
 	)
 
 	return ret, nil
+}
+
+func init() {
+	// Ensure that logging is turned off for Zap so that our logs aren't smashed by Trivy.
+	// Only errors are used for output
+	aqualog.InitLogger(false, true)
 }
