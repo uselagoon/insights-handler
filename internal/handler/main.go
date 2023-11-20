@@ -512,7 +512,7 @@ func (h *Messaging) sendToLagoonS3(incoming *InsightsMessage, insights InsightsD
 			if err != nil {
 				return err
 			}
-			slog.Info(fmt.Sprintf("Successfully uploaded %s of size %d\n", s3FilePath, info.Size))
+			slog.Info(fmt.Sprintf("Successfully uploaded %s of size %d", s3FilePath, info.Size))
 
 			err = os.Remove(tempFilePath)
 			if err != nil {
