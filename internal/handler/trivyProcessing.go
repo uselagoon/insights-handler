@@ -8,6 +8,7 @@ import (
 	"github.com/Khan/genqlient/graphql"
 	"github.com/aquasecurity/trivy/pkg/commands/artifact"
 	"github.com/aquasecurity/trivy/pkg/flag"
+	aqualog "github.com/aquasecurity/trivy/pkg/log"
 	"github.com/aquasecurity/trivy/pkg/types"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient"
 	"io"
@@ -151,9 +152,10 @@ func executeProcessingTrivy(trivyRemoteAddress string, bomWriteDir string, bom c
 		os.Remove(fullFilename)
 		file.Close()
 	}()
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1000)
 	defer cancel()
+
+	aqualog.InitLogger(false, true)
 
 	opts := flag.Options{
 		GlobalOptions: flag.GlobalOptions{
