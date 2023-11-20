@@ -325,6 +325,18 @@ func parserFilterLoopForPayloads(insights InsightsData, p PayloadInput, h *Messa
 
 // processResultset will send results as facts to the lagoon api after processing via a parser filter
 func processResultset(result []interface{}, err error, h *Messaging, apiClient graphql.Client, resource ResourceDestination, source string) {
+	project, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
+	if apiErr != nil {
+		log.Println(apiErr)
+	}
+
+	// Even if we don't find any new facts, we need to delete the existing ones
+	// since these may be the end product of a filter process
+	apiErr = h.deleteExistingFactsBySource(apiClient, environment, source, project)
+	if apiErr != nil {
+		log.Printf("%s", apiErr.Error())
+	}
+
 	for _, r := range result {
 		if fact, ok := r.(LagoonFact); ok {
 			// Handle single fact
@@ -343,23 +355,13 @@ func processResultset(result []interface{}, err error, h *Messaging, apiClient g
 }
 
 func (h *Messaging) sendFactsToLagoonAPI(facts []LagoonFact, apiClient graphql.Client, resource ResourceDestination, source string) error {
-	project, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
-	if apiErr != nil {
-		log.Println(apiErr)
-	}
-	if EnableDebug {
-		log.Printf("[DEBUG] matched %d number of fact(s) for '%v:%v', from source '%s'", len(facts), project.Name, environment, source)
-	}
 
-	// Even if we don't find any new facts, we need to delete the existing ones
-	// since these may be the end product of a filter process
-	apiErr = h.deleteExistingFactsBySource(apiClient, environment, source, project)
-	if apiErr != nil {
-		return fmt.Errorf("%s", apiErr.Error())
+	if EnableDebug {
+		log.Printf("[DEBUG] matched %d number of fact(s) for '%v:%v', from source '%s'", len(facts), resource.Project, resource.Environment, source)
 	}
 
 	if len(facts) > 0 {
-		apiErr = h.pushFactsToLagoonApi(facts, resource)
+		apiErr := h.pushFactsToLagoonApi(facts, resource)
 		if apiErr != nil {
 			return fmt.Errorf("%s", apiErr.Error())
 		}
