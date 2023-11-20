@@ -301,7 +301,6 @@ func parserFilterLoopForBinaryPayloads(insights InsightsData, p string, h *Messa
 
 		result, source, err := filter(h, insights, p, apiClient, resource)
 		if err != nil {
-			//log.Println(fmt.Errorf(err.Error()))
 			slog.Error("Error running filter", "error", err.Error())
 		}
 
@@ -316,13 +315,11 @@ func parserFilterLoopForPayloads(insights InsightsData, p PayloadInput, h *Messa
 
 		json, err := json.Marshal(p)
 		if err != nil {
-			//log.Println(fmt.Errorf(err.Error()))
 			slog.Error("Error marshalling data", "error", err.Error())
 		}
 
 		result, source, err = filter(h, insights, fmt.Sprintf("%s", json), apiClient, resource)
 		if err != nil {
-			//log.Println(fmt.Errorf(err.Error()))
 			slog.Error("Error Filtering payload", "error", err.Error())
 		}
 
@@ -337,7 +334,6 @@ func processResultset(result []interface{}, err error, h *Messaging, apiClient g
 			// Handle single fact
 			err = h.sendFactsToLagoonAPI([]LagoonFact{fact}, apiClient, resource, source)
 			if err != nil {
-				//fmt.Println(err)
 				slog.Error("Error sending facts to Lagoon API", "error", err.Error())
 			}
 		} else if facts, ok := r.([]LagoonFact); ok {
