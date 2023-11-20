@@ -19,7 +19,7 @@ type FactTransformNameValue struct {
 type FactLookupNameValue struct {
 	Name       string `json:"name"`
 	Value      string `json:"value"`
-	ExactMatch bool   `json:"exactMatch"`
+	ExactMatch bool   `json:"exactMatch" yaml:"exactMatch"`
 }
 
 type FactTransform struct {
