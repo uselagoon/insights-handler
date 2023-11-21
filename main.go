@@ -100,6 +100,7 @@ func main() {
 	disableS3Upload = getEnvBool("INSIGHTS_DISABLE_S3_UPLOAD", disableS3Upload)
 	problemsFromSBOM = getEnvBool("PROBLEMS_FROM_SBOM", problemsFromSBOM)
 	trivyServerEndpoint = getEnv("TRIVY_SERVER_ENDPOINT", trivyServerEndpoint)
+	enableDebug = getEnvBool("ENABLE_DEBUG", enableDebug)
 	// First we set up the default logger for the project
 
 	// If we enable debugging, we set the logging level to output debug for the default logger.
@@ -109,7 +110,7 @@ func main() {
 		debugLevel = slog.LevelDebug
 	}
 
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: debugLevel,
 	})))
 

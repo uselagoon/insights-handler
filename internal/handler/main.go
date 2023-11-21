@@ -384,7 +384,6 @@ func (h *Messaging) deleteExistingFactsBySource(apiClient graphql.Client, enviro
 		return err
 	}
 
-	//log.Printf("Previous facts deleted for '%s:%s' and source '%s'", project.Name, environment.Name, source)
 	slog.Info("Previous facts deleted",
 		"ProjectId", project.Id,
 		"ProjectName", project.Name,
