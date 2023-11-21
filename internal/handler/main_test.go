@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"io/ioutil"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -200,7 +201,7 @@ func Test_processFactsFromSBOM(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := processFactsFromSBOM(tt.args.bom, tt.args.environmentId, tt.args.source)
+			got := processFactsFromSBOM(slog.Default(), tt.args.bom, tt.args.environmentId, tt.args.source)
 			if len(got) != len(tt.want) {
 				t.Errorf("processFactsFromSBOM() returned %d results, want %d", len(got), len(tt.want))
 			}

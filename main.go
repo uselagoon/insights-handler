@@ -3,13 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
+	"github.com/cheshir/go-mq"
+	"github.com/uselagoon/lagoon/services/insights-handler/internal/handler"
+	"log/slog"
 	"os"
 	"strconv"
 	"time"
-
-	"github.com/cheshir/go-mq"
-	"github.com/uselagoon/lagoon/services/insights-handler/internal/handler"
 )
 
 var (
@@ -101,15 +100,26 @@ func main() {
 	disableS3Upload = getEnvBool("INSIGHTS_DISABLE_S3_UPLOAD", disableS3Upload)
 	problemsFromSBOM = getEnvBool("PROBLEMS_FROM_SBOM", problemsFromSBOM)
 	trivyServerEndpoint = getEnv("TRIVY_SERVER_ENDPOINT", trivyServerEndpoint)
+	enableDebug = getEnvBool("ENABLE_DEBUG", enableDebug)
+	// First we set up the default logger for the project
 
+	// If we enable debugging, we set the logging level to output debug for the default logger.
+	// This means we don't need to wrap debug info, simply log it at the right level
+	debugLevel := slog.LevelInfo
+	if enableDebug {
+		debugLevel = slog.LevelDebug
+	}
+
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: debugLevel,
+	})))
+
+	slog.Debug("problemsFromSBOM", "status", problemsFromSBOM)
 	if problemsFromSBOM == true {
-		log.Println("PROBLEMS FROM SBOM - enabled")
 		if trivyServerEndpoint == "" {
-			log.Fatalf("NO TRIVY SERVER ENDPOINT SET - exiting")
+			slog.Error("NO TRIVY SERVER ENDPOINT SET - exiting")
 			os.Exit(1)
 		}
-	} else {
-		log.Println("PROBLEMS FROM SBOM - disabled")
 	}
 
 	// configure the backup handler settings
@@ -138,19 +148,13 @@ func main() {
 		Disabled:        disableS3Upload,
 	}
 
-	if disableS3Upload == true {
-		fmt.Println("Disabled S3 upload is true")
-	} else {
-		fmt.Println("Disabled S3 upload is false")
-	}
+	slog.Debug("disableS3Upload", "status", disableS3Upload)
 
-	log.Println("Registering Fact Filters/Transformer")
 	err := handler.RegisterFiltersFromDisk(filterTransformerFile)
 	if err != nil {
-		log.Println(err)
+		// TODO: BETTER ERROR HANDLING
+		slog.Error("Unable to register filters from disk", "Error", err)
 	}
-
-	log.Println("insights-handler running...")
 
 	config := mq.Config{
 		ReconnectDelay: time.Duration(rabbitReconnectRetryInterval) * time.Second,
@@ -205,6 +209,7 @@ func main() {
 	)
 
 	// start the consumer
+	//slog.Info("insights-handler is started-up")
 	messaging.Consumer()
 }
 

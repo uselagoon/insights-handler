@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/aquasecurity/trivy/pkg/types"
 	"github.com/goccy/go-yaml"
@@ -43,7 +42,6 @@ func Test_convertBOMToProblemsArray(t *testing.T) {
 			var bom cyclonedx.BOM
 			json.Unmarshal(bomText, &bom)
 			got, err := convertBOMToProblemsArray(tt.args.environment, tt.args.source, tt.args.service, bom)
-			fmt.Print(len(got))
 			if (err != nil) != tt.wantErr {
 				t.Errorf("convertBOMToProblemsArray() error = %v, wantErr %v", err, tt.wantErr)
 				return

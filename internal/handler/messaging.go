@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/cheshir/go-mq"
-	"log"
+	"log/slog"
 	"sort"
 	"strconv"
 )
@@ -44,7 +44,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 			// Ack to remove from queue
 			err := message.Ack(false)
 			if err != nil {
-				fmt.Printf("Failed to acknowledge message: %s\n", err.Error())
+				slog.Error("Failed to acknowledge message", "Error", err.Error())
 			}
 		}
 	}(message)
@@ -54,7 +54,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 			// Ack to remove from queue
 			err := message.Reject(requeue)
 			if err != nil {
-				fmt.Printf("Failed to requect message: %s\n", err.Error())
+				slog.Error("Failed to reject message", "Error", err.Error())
 			}
 		}
 	}(message)
@@ -72,9 +72,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 	// the extra processing below.
 	if incoming.Type == "direct.facts" {
 		resp := processFactsDirectly(message, h)
-		if h.EnableDebug {
-			log.Println(resp)
-		}
+		slog.Debug(resp)
 		acknowledgeMessage()
 		return
 	}
@@ -83,7 +81,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 		resp, _ := processProblemsDirectly(message, h)
 		if h.EnableDebug {
 			for _, d := range resp {
-				log.Println(d)
+				slog.Debug(d)
 			}
 		}
 		acknowledgeMessage()
@@ -151,9 +149,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 
 	// Determine incoming payload type
 	if incoming.Payload == nil && incoming.BinaryPayload == nil {
-		if h.EnableDebug {
-			log.Printf("[DEBUG] no payload was found")
-		}
+		slog.Debug("No payload was found - rejecting message and exiting")
 		rejectMessage(false)
 		return
 	}
@@ -165,18 +161,22 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 	}
 
 	// Debug
-	if h.EnableDebug {
-		log.Println("[DEBUG] insights:", insights)
-		log.Println("[DEBUG] target:", resource)
-	}
+	//if h.EnableDebug {
+	//	log.Println("[DEBUG] insights:", insights)
+	//	log.Println("[DEBUG] target:", resource)
+	//}
+	slog.Debug("Insights", "data", fmt.Sprint(insights))
+	slog.Debug("Target", "data", fmt.Sprint(resource))
 
 	// Process s3 upload
 	if !h.S3Config.Disabled {
 		if insights.InsightsType != Direct {
 			err := h.sendToLagoonS3(incoming, insights, resource)
 			if err != nil {
-				log.Printf("Unable to send to S3: %s", err.Error())
-				// TODO: do we reque here? Reject
+				//log.Printf("Unable to send to S3: %s", err.Error())
+				slog.Error("Unable to send to S3", "Error", err.Error())
+
+				// TODO: BETTER ERROR HANDLING
 			}
 		}
 	}
@@ -187,12 +187,13 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 			insights.InsightsType != Image &&
 			insights.InsightsType != Raw &&
 			insights.InsightsType != Direct {
-			log.Println("only 'sbom', 'direct', 'raw', and 'image' types are currently supported for api processing")
+			slog.Error("only 'sbom', 'direct', 'raw', and 'image' types are currently supported for api processing")
 		} else {
 			err := h.sendToLagoonAPI(incoming, resource, insights)
 
 			if err != nil {
-				log.Printf("Unable to send to the api: %s", err.Error())
+				//log.Printf("Unable to send to the api: %s", err.Error())
+				slog.Error("Unable to send to the API", "Error", err.Error())
 				rejectMessage(false)
 				return
 			}

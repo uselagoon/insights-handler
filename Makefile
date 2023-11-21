@@ -5,6 +5,6 @@ gettrivy:
 
 .PHONY: runlocal
 runlocal:
-	go run main.go --problems-from-sbom=true --rabbitmq-username=guest  --rabbitmq-password=guest --lagoon-api-host=http://localhost:8888/graphql   --jwt-token-signing-key=secret   --access-key-id=minio     --secret-access-key=minio123 --disable-s3-upload=true
+	go run main.go --problems-from-sbom=true --rabbitmq-username=guest  --rabbitmq-password=guest --lagoon-api-host=http://localhost:8888/graphql   --jwt-token-signing-key=secret   --access-key-id=minio     --secret-access-key=minio123 --disable-s3-upload=true --debug=true
 
 
