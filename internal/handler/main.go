@@ -283,32 +283,43 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 
 	if insights.InputPayload == Payload && insights.LagoonType == Facts {
 		for _, p := range incoming.Payload {
-			parserFilterLoopForPayloads(insights, p, h, apiClient, resource)
+			err := parserFilterLoopForPayloads(insights, p, h, apiClient, resource)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	if insights.InputPayload == BinaryPayload && insights.LagoonType == Facts {
 		for _, p := range incoming.BinaryPayload {
-			parserFilterLoopForBinaryPayloads(insights, p, h, apiClient, resource)
+			err := parserFilterLoopForBinaryPayloads(insights, p, h, apiClient, resource)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
 }
 
-func parserFilterLoopForBinaryPayloads(insights InsightsData, p string, h *Messaging, apiClient graphql.Client, resource ResourceDestination) {
+func parserFilterLoopForBinaryPayloads(insights InsightsData, p string, h *Messaging, apiClient graphql.Client, resource ResourceDestination) error {
 	for _, filter := range parserFilters {
 
 		result, source, err := filter(h, insights, p, apiClient, resource)
 		if err != nil {
 			slog.Error("Error running filter", "error", err.Error())
+			return err
 		}
 
-		processResultset(result, err, h, apiClient, resource, source)
+		err = processResultset(result, err, h, apiClient, resource, source)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func parserFilterLoopForPayloads(insights InsightsData, p PayloadInput, h *Messaging, apiClient graphql.Client, resource ResourceDestination) {
+func parserFilterLoopForPayloads(insights InsightsData, p PayloadInput, h *Messaging, apiClient graphql.Client, resource ResourceDestination) error {
 	for _, filter := range parserFilters {
 		var result []interface{}
 		var source string
@@ -316,22 +327,29 @@ func parserFilterLoopForPayloads(insights InsightsData, p PayloadInput, h *Messa
 		json, err := json.Marshal(p)
 		if err != nil {
 			slog.Error("Error marshalling data", "error", err.Error())
+			return err
 		}
 
 		result, source, err = filter(h, insights, fmt.Sprintf("%s", json), apiClient, resource)
 		if err != nil {
 			slog.Error("Error Filtering payload", "error", err.Error())
+			return err
 		}
 
-		processResultset(result, err, h, apiClient, resource, source)
+		err = processResultset(result, err, h, apiClient, resource, source)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // processResultset will send results as facts to the lagoon api after processing via a parser filter
-func processResultset(result []interface{}, err error, h *Messaging, apiClient graphql.Client, resource ResourceDestination, source string) {
+func processResultset(result []interface{}, err error, h *Messaging, apiClient graphql.Client, resource ResourceDestination, source string) error {
 	project, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
 	if apiErr != nil {
 		log.Println(apiErr)
+		return apiErr
 	}
 
 	// Even if we don't find any new facts, we need to delete the existing ones
@@ -339,6 +357,7 @@ func processResultset(result []interface{}, err error, h *Messaging, apiClient g
 	apiErr = h.deleteExistingFactsBySource(apiClient, environment, source, project)
 	if apiErr != nil {
 		log.Printf("%s", apiErr.Error())
+		return apiErr
 	}
 
 	for _, r := range result {
@@ -347,15 +366,23 @@ func processResultset(result []interface{}, err error, h *Messaging, apiClient g
 			err = h.sendFactsToLagoonAPI([]LagoonFact{fact}, apiClient, resource, source)
 			if err != nil {
 				slog.Error("Error sending facts to Lagoon API", "error", err.Error())
+				return err
 			}
 		} else if facts, ok := r.([]LagoonFact); ok {
 			// Handle slice of facts
-			h.sendFactsToLagoonAPI(facts, apiClient, resource, source)
+			err = h.sendFactsToLagoonAPI(facts, apiClient, resource, source)
+			if err != nil {
+				slog.Error("Error sending facts to Lagoon API", "error", err.Error())
+				return err
+			}
 		} else {
 			// Unexpected type returned from filter()
-			slog.Error(fmt.Sprintf("unexpected type returned from filter(): %T\n", r))
+			err := fmt.Errorf("unexpected type returned from filter(): %T\n", r)
+			slog.Error(err.Error())
+			return err
 		}
 	}
+	return nil
 }
 
 func (h *Messaging) sendFactsToLagoonAPI(facts []LagoonFact, apiClient graphql.Client, resource ResourceDestination, source string) error {
