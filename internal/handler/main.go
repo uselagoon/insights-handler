@@ -217,13 +217,13 @@ func (h *Messaging) Consumer() {
 		var err error
 		messageQueue, err = mq.New(h.Config)
 		if err != nil {
-			log.Println(err,
-				fmt.Sprintf(
-					"Failed to initialize message queue manager, retrying in %d seconds, attempt %d/%d",
-					h.ConnectionRetryInterval,
-					attempt,
-					h.ConnectionAttempts,
-				),
+			slog.Error(fmt.Sprintf(
+				"Failed to initialize message queue manager, retrying in %d seconds, attempt %d/%d",
+				h.ConnectionRetryInterval,
+				attempt,
+				h.ConnectionAttempts,
+			),
+				"error", err.Error(),
 			)
 			time.Sleep(time.Duration(h.ConnectionRetryInterval) * time.Second)
 		}
