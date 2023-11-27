@@ -348,7 +348,7 @@ func parserFilterLoopForPayloads(insights InsightsData, p PayloadInput, h *Messa
 func processResultset(result []interface{}, err error, h *Messaging, apiClient graphql.Client, resource ResourceDestination, source string) error {
 	project, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
 	if apiErr != nil {
-		log.Println(apiErr)
+		slog.Error(apiErr.Error())
 		return apiErr
 	}
 
@@ -356,7 +356,7 @@ func processResultset(result []interface{}, err error, h *Messaging, apiClient g
 	// since these may be the end product of a filter process
 	apiErr = h.deleteExistingFactsBySource(apiClient, environment, source, project)
 	if apiErr != nil {
-		log.Printf("%s", apiErr.Error())
+		slog.Error(apiErr.Error())
 		return apiErr
 	}
 
