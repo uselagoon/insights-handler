@@ -3,7 +3,7 @@ module github.com/uselagoon/lagoon/services/insights-handler
 go 1.21
 
 require (
-	github.com/Khan/genqlient v0.3.0
+	github.com/Khan/genqlient v0.6.0
 	github.com/aquasecurity/trivy v0.43.0
 	github.com/cheshir/go-mq v1.0.2
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
@@ -281,7 +281,7 @@ require (
 	github.com/twitchtv/twirp v8.1.2+incompatible // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/vbatts/tar-split v0.11.3 // indirect
-	github.com/vektah/gqlparser/v2 v2.4.5 // indirect
+	github.com/vektah/gqlparser/v2 v2.5.1 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
