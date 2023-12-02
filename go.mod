@@ -7,7 +7,7 @@ require (
 	github.com/aquasecurity/trivy v0.43.0
 	github.com/cheshir/go-mq v1.0.2
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/goccy/go-yaml v1.8.1
+	github.com/goccy/go-yaml v1.11.2
 	github.com/joho/godotenv v1.5.1
 	github.com/matryer/try v0.0.0-20161228173917-9ac251b645a2
 	github.com/stretchr/testify v1.8.4
