@@ -1,10 +1,10 @@
 {
-  "projectName": "organization-cotton",
+  "projectName": "lagoon-demo-org",
   "environment": 3,
   "environmentName": "main",
   "facts": [
     {
-      "projectName": "organization-cotton",
+      "projectName": "lagoon-demo-org",
       "environmentName": "main",
       "name": "drupal-core",
       "value": "9.0.1",
@@ -15,7 +15,7 @@
       "keyFact": true
     },
     {
-      "projectName": "organization-cotton",
+      "projectName": "lagoon-demo-org",
       "environmentName": "main",
       "name": "php-version",
       "value": "8.0.3",

@@ -1,7 +1,7 @@
 {
   "payload": [
     {
-      "project": "organization-cotton",
+      "project": "lagoon-demo-org",
       "environment": "main",
       "facts": [
         {
@@ -30,7 +30,7 @@
   "binaryPayload": {},
   "annotations": {},
   "labels": {
-    "lagoon.sh/project": "organization-cotton",
+    "lagoon.sh/project": "lagoon-demo-org",
     "lagoon.sh/environment": "main",
     "lagoon.sh/service": "cli",
     "lagoon.sh/insightsType": "raw",

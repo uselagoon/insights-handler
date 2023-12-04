@@ -87,7 +87,7 @@ func Test_processFactsInsightsData(t *testing.T) {
 				v:         string(data),
 				apiClient: apiClient,
 				resource: ResourceDestination{
-					Project: "organization-cotton",
+					Project: "lagoon-demo-org",
 					Service: "cli",
 				},
 			},
