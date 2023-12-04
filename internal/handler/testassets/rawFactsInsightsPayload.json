@@ -1,8 +1,8 @@
 {
   "payload": [
     {
-      "project": "high-cotton",
-      "environment": "Master",
+      "project": "organization-cotton",
+      "environment": "main",
       "facts": [
         {
           "name": "drupal-core",
@@ -30,8 +30,8 @@
   "binaryPayload": {},
   "annotations": {},
   "labels": {
-    "lagoon.sh/project": "high-cotton",
-    "lagoon.sh/environment": "Master",
+    "lagoon.sh/project": "organization-cotton",
+    "lagoon.sh/environment": "main",
     "lagoon.sh/service": "cli",
     "lagoon.sh/insightsType": "raw",
     "lagoon.sh/insightsOutputFileMIMEType": "application/json",

@@ -1,10 +1,10 @@
 {
-  "environment": 1236,
-  "projectName": "test6-drupal-example-simple",
-  "environmentName": "test1copy",
+  "environment": 3,
+  "projectName": "organization-cotton",
+  "environmentName": "main",
   "problems": [
     {
-      "environment": 1236,
+      "environment": 3,
       "identifier": "1234",
       "version": "1.0.1",
       "fixedVersion": "1.0.2",

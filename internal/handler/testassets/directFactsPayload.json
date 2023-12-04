@@ -1,12 +1,11 @@
 {
-  "projectName": "high-cotton",
+  "projectName": "organization-cotton",
   "environment": 3,
-  "environmentName": "Master",
+  "environmentName": "main",
   "facts": [
     {
-      "projectName": "high-cotton",
-      "environment": 3,
-      "environmentName": "Master",
+      "projectName": "organization-cotton",
+      "environmentName": "main",
       "name": "drupal-core",
       "value": "9.0.1",
       "description": "Drupal CMS version found on environment",
@@ -16,9 +15,8 @@
       "keyFact": true
     },
     {
-      "projectName": "high-cotton",
-      "environment": 3,
-      "environmentName": "Master",
+      "projectName": "organization-cotton",
+      "environmentName": "main",
       "name": "php-version",
       "value": "8.0.3",
       "description": "PHP version found on environment",
