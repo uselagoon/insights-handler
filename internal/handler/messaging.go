@@ -19,6 +19,7 @@ type Messaging struct {
 	EnableDebug             bool
 	ProblemsFromSBOM        bool
 	TrivyServerEndpoint     string
+	RequeueAttempts         int
 }
 
 // NewMessaging returns a messaging with config
@@ -32,6 +33,7 @@ func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts 
 		EnableDebug:             enableDebug,
 		ProblemsFromSBOM:        problemsFromSBOM,
 		TrivyServerEndpoint:     trivyServerEndpoint,
+		RequeueAttempts:         0,
 	}
 }
 
@@ -173,10 +175,17 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 		if insights.InsightsType != Direct {
 			err := h.sendToLagoonS3(incoming, insights, resource)
 			if err != nil {
-				//log.Printf("Unable to send to S3: %s", err.Error())
-				slog.Error("Unable to send to S3", "Error", err.Error())
-
-				// TODO: BETTER ERROR HANDLING
+				// parse error to determine if retry is valid
+				if err.Error() == "Unable to connect to S3" || err.Error() == "Unable to connect to S3: Unable to connect to the endpoint URL" {
+					slog.Error("Unable to send to S3", "Error", err.Error())
+				} else {
+					h.RequeueAttempts++
+					if h.RequeueAttempts <= 3 {
+						rejectMessage(true)
+					} else {
+						slog.Error("Retries failed, unable to send to S3", "Error", err.Error())
+					}
+				}
 			}
 		}
 	}
@@ -192,10 +201,14 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 			err := h.sendToLagoonAPI(incoming, resource, insights)
 
 			if err != nil {
-				//log.Printf("Unable to send to the api: %s", err.Error())
-				slog.Error("Unable to send to the API", "Error", err.Error())
-				rejectMessage(false)
-				return
+				h.RequeueAttempts++
+				if h.RequeueAttempts <= 3 {
+					rejectMessage(true)
+				} else {
+					slog.Error("Retries failed, unable to send to the API", "Error", err.Error())
+					rejectMessage(false)
+					return
+				}
 			}
 		}
 	}
