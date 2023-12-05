@@ -176,7 +176,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 			err := h.sendToLagoonS3(incoming, insights, resource)
 			if err != nil {
 				// parse error to determine if retry is valid
-				if err.Error() == "Unable to connect to S3" || err.Error() == "Unable to connect to S3: Unable to connect to the endpoint URL" {
+				if err.Error() == "Could not connect to the endpoint URL" || err.Error() == "Connect timeout on endpoint URL" {
 					slog.Error("Unable to send to S3", "Error", err.Error())
 				} else {
 					h.RequeueAttempts++
