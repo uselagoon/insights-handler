@@ -6,31 +6,30 @@ import (
 	"fmt"
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/Khan/genqlient/graphql"
-	"github.com/aquasecurity/trivy/pkg/commands/artifact"
-	"github.com/aquasecurity/trivy/pkg/flag"
-	aqualog "github.com/aquasecurity/trivy/pkg/log"
-	"github.com/aquasecurity/trivy/pkg/types"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient"
 	"io"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
 	"strings"
-	"time"
 )
 
 const problemSource = "insights-handler-trivy"
 
 func SbomToProblems(apiClient graphql.Client, trivyRemoteAddress string, bomWriteDirectory string, environmentId int, service string, sbom cdx.BOM) error {
-	rep, err := executeProcessingTrivy(trivyRemoteAddress, bomWriteDirectory, sbom)
+	problemsArray, err := executeProcessingTrivy(trivyRemoteAddress, bomWriteDirectory, sbom)
 	if err != nil {
 		return fmt.Errorf("unable to execute trivy processing: %v", err.Error())
 	}
-	problems, err := trivyReportToProblems(environmentId, problemSource, service, rep)
-	if err != nil {
-		return fmt.Errorf("unable to execute trivy processing - converting trivy report to problems: %v", err.Error())
+
+	for i := 0; i < len(problemsArray); i++ {
+		problemsArray[i].Environment = environmentId
+		problemsArray[i].Service = service
+		problemsArray[i].Source = problemSource
 	}
-	err = writeProblemsArrayToApi(apiClient, environmentId, problemSource, service, problems)
+
+	err = writeProblemsArrayToApi(apiClient, environmentId, problemSource, service, problemsArray)
 	if err != nil {
 		return fmt.Errorf("unable to execute trivy processing- writing problems to api: %v", err.Error())
 	}
@@ -122,27 +121,57 @@ func IsTrivyServerIsAlive(trivyRemoteAddress string) (bool, error) {
 	return body == "ok", nil
 }
 
-func executeProcessingTrivy(trivyRemoteAddress string, bomWriteDir string, bom cdx.BOM) (types.Report, error) {
+type trivyOutput struct {
+	Results []trivyOutputResults `json:"Results"`
+}
+
+type trivyOutputResults struct {
+	Vulnerabilities []TrivyProblemOutput `json:"Vulnerabilities"`
+}
+
+type TrivyProblemOutput struct {
+	VulnerabilityID  string   `json:"VulnerabilityID,omitempty"`
+	PkgID            string   `json:"PkgID,omitempty"`
+	PkgName          string   `json:"PkgName,omitempty"`
+	InstalledVersion string   `json:"InstalledVersion,omitempty"`
+	FixedVersion     string   `json:"FixedVersion,omitempty"`
+	Status           string   `json:"Status,omitempty"`
+	SeveritySource   string   `json:"SeveritySource,omitempty"`
+	PrimaryURL       string   `json:"PrimaryURL,omitempty"`
+	PkgRef           string   `json:"PkgRef,omitempty"`
+	Title            string   `json:"Title,omitempty"`
+	Description      string   `json:"Description,omitempty"`
+	Severity         string   `json:"Severity,omitempty"`
+	CweIDs           []string `json:"CweIDs,omitempty"`
+	References       []string `json:"References,omitempty"`
+	PublishedDate    string   `json:"PublishedDate,omitempty"`
+	LastModifiedDate string   `json:"LastModifiedDate,omitempty"`
+}
+
+func executeProcessingTrivy(trivyRemoteAddress string, bomWriteDir string, bom cdx.BOM) ([]lagoonclient.LagoonProblem, error) {
+
 	//first, we write this thing to disk
+	slog.Info("About to process trivy details locally")
+
 	file, err := os.CreateTemp(bomWriteDir, "cycloneDX-*.json")
 	if err != nil {
-		return types.Report{}, err
+		return []lagoonclient.LagoonProblem{}, err
 	}
 
 	marshalledBom, err := json.Marshal(bom)
 
 	if err != nil {
-		return types.Report{}, err
+		return []lagoonclient.LagoonProblem{}, err
 	}
 
 	_, err = file.Write(marshalledBom)
 	if err != nil {
-		return types.Report{}, err
+		return []lagoonclient.LagoonProblem{}, err
 	}
 
 	fileInfo, err := file.Stat()
 	if err != nil {
-		return types.Report{}, err
+		return []lagoonclient.LagoonProblem{}, err
 	}
 
 	fullFilename := fmt.Sprintf("%v/%v", bomWriteDir, fileInfo.Name())
@@ -152,111 +181,43 @@ func executeProcessingTrivy(trivyRemoteAddress string, bomWriteDir string, bom c
 		os.Remove(fullFilename)
 		file.Close()
 	}()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1000)
-	defer cancel()
 
-	opts := flag.Options{
-		GlobalOptions: flag.GlobalOptions{
-			ConfigFile: "trivy.yaml",
-			CacheDir:   "/tmp/.cache/trivy",
-		},
-		AWSOptions: flag.AWSOptions{},
-		CacheOptions: flag.CacheOptions{
-			CacheBackend: "fs",
-		},
-		CloudOptions: flag.CloudOptions{},
-		DBOptions: flag.DBOptions{
-			DBRepository:     "ghcr.io/aquasecurity/trivy-db",
-			JavaDBRepository: "ghcr.io/aquasecurity/trivy-java-db",
-		},
-		ImageOptions:    flag.ImageOptions{},
-		K8sOptions:      flag.K8sOptions{},
-		LicenseOptions:  flag.LicenseOptions{},
-		MisconfOptions:  flag.MisconfOptions{},
-		ModuleOptions:   flag.ModuleOptions{},
-		RegistryOptions: flag.RegistryOptions{},
-		RegoOptions:     flag.RegoOptions{},
-		RemoteOptions: flag.RemoteOptions{
-			ServerAddr:    trivyRemoteAddress,
-			Token:         "",
-			TokenHeader:   "Trivy-Token",
-			CustomHeaders: http.Header{},
-		},
-		RepoOptions:   flag.RepoOptions{},
-		ReportOptions: flag.ReportOptions{},
-		SBOMOptions:   flag.SBOMOptions{},
-		ScanOptions: flag.ScanOptions{
-			Target: fullFilename,
-			Scanners: types.Scanners{
-				types.VulnerabilityScanner,
-			},
-		},
-		SecretOptions: flag.SecretOptions{},
-		VulnerabilityOptions: flag.VulnerabilityOptions{
-			VulnType: []string{
-				"os",
-				"library",
-			},
-		},
-		AppVersion:        "dev",
-		DisabledAnalyzers: nil,
-	}
-	runner, err := artifact.NewRunner(ctx, opts)
+	cmd := exec.Command("trivy", "sbom", "--format", "json", "--server", trivyRemoteAddress, fullFilename)
+	var out strings.Builder
+	var outErr strings.Builder
+	cmd.Stdout = &out
+	cmd.Stderr = &outErr
 
+	err = cmd.Run()
 	if err != nil {
-		return types.Report{}, err
+		return []lagoonclient.LagoonProblem{}, err
 	}
 
-	rep, err := runner.ScanSBOM(context.TODO(), opts)
+	var results trivyOutput
 
+	err = json.Unmarshal([]byte(out.String()), &results)
 	if err != nil {
-		return types.Report{}, err
+		return []lagoonclient.LagoonProblem{}, err
 	}
 
-	return rep, nil
-}
+	retData := []lagoonclient.LagoonProblem{}
 
-func trivyReportToProblems(environment int, source string, service string, report types.Report) ([]lagoonclient.LagoonProblem, error) {
-	var ret []lagoonclient.LagoonProblem
-	if len(report.Results) == 0 {
-		return ret, fmt.Errorf("No Vulnerabilities")
-	}
-
-	for _, res := range report.Results {
-		for _, v := range res.Vulnerabilities {
-			p := lagoonclient.LagoonProblem{
-				Environment:       environment,
-				Identifier:        v.VulnerabilityID,
-				Version:           v.InstalledVersion,
-				FixedVersion:      v.FixedVersion,
-				Source:            source,
-				Service:           service,
+	for _, resultset := range results.Results {
+		for _, vul := range resultset.Vulnerabilities {
+			prob := lagoonclient.LagoonProblem{
+				Identifier:        vul.VulnerabilityID,
+				Version:           vul.InstalledVersion,
+				FixedVersion:      vul.FixedVersion,
 				Data:              "{}",
-				AssociatedPackage: "",
-				Description:       v.Vulnerability.Description,
+				Severity:          lagoonclient.ProblemSeverityRating(vul.Severity),
+				SeverityScore:     0,
+				AssociatedPackage: vul.PkgName,
+				Description:       vul.Description,
+				Links:             "",
 			}
-
-			if len(v.Vulnerability.References) > 0 {
-				p.Links = v.Vulnerability.References[0]
-			}
-
-			p.Severity = lagoonclient.ProblemSeverityRating(v.Vulnerability.Severity)
-
-			ret = append(ret, p)
+			retData = append(retData, prob)
 		}
 	}
-	//fmt.Printf("Found %v problems for environment %v\n", len(ret), environment)
-	slog.Info("Found problems",
-		"EnvironmentId", environment,
-		"Source", source,
-		"Number", len(ret),
-	)
 
-	return ret, nil
-}
-
-func init() {
-	// Ensure that logging is turned off for Zap so that our logs aren't smashed by Trivy.
-	// Only errors are used for output
-	aqualog.InitLogger(false, true)
+	return retData, nil
 }
