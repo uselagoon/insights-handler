@@ -3,7 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"gopkg.in/yaml.v1"
+	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"path/filepath"
 	"strings"

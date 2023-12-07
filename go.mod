@@ -9,7 +9,6 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/matryer/try v0.0.0-20161228173917-9ac251b645a2
 	github.com/stretchr/testify v1.8.4
-	gopkg.in/yaml.v1 v1.0.0-20140924161607-9f9df34309c0
 )
 
 require (
@@ -55,7 +54,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.21
 	github.com/tiago4orion/conjure v0.0.0-20150908101743-93cb30b9d218 // indirect
 	golang.org/x/net v0.19.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 // Fixes for AppID
