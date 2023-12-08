@@ -19,11 +19,11 @@ type Messaging struct {
 	EnableDebug             bool
 	ProblemsFromSBOM        bool
 	TrivyServerEndpoint     string
-	RequeueAttempts         int
+	MessageQWriter          func(data []byte) error
 }
 
 // NewMessaging returns a messaging with config
-func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts int, startupInterval int, enableDebug bool, problemsFromSBOM bool, trivyServerEndpoint string) *Messaging {
+func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts int, startupInterval int, enableDebug bool, problemsFromSBOM bool, trivyServerEndpoint string, MessageQWriter func(data []byte) error) *Messaging {
 	return &Messaging{
 		Config:                  config,
 		LagoonAPI:               lagoonAPI,
@@ -33,7 +33,7 @@ func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts 
 		EnableDebug:             enableDebug,
 		ProblemsFromSBOM:        problemsFromSBOM,
 		TrivyServerEndpoint:     trivyServerEndpoint,
-		RequeueAttempts:         0,
+		MessageQWriter:          MessageQWriter,
 	}
 }
 
@@ -175,16 +175,21 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 		if insights.InsightsType != Direct {
 			err := h.sendToLagoonS3(incoming, insights, resource)
 			if err != nil {
-				// parse error to determine if retry is valid
-				if err.Error() == "Could not connect to the endpoint URL" || err.Error() == "Connect timeout on endpoint URL" {
-					slog.Error("Unable to send to S3", "Error", err.Error())
-				} else {
-					h.RequeueAttempts++
-					if h.RequeueAttempts <= 3 {
-						rejectMessage(true)
-					} else {
-						slog.Error("Retries failed, unable to send to S3", "Error", err.Error())
+				incoming.RequeueAttempts++
+				updatedMessage, err := json.Marshal(incoming)
+				if err != nil {
+					fmt.Printf(err.Error())
+				}
+				if incoming.RequeueAttempts <= 3 {
+					rejectMessage(false)
+					if err := h.MessageQWriter(updatedMessage); err != nil {
+						slog.Error("Error re-queueing message", "Error", err.Error())
 					}
+					return
+				} else {
+					slog.Error("Retries failed, unable to send to S3", "Error", err.Error())
+					rejectMessage(false)
+					return
 				}
 			}
 		}
@@ -201,9 +206,17 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 			err := h.sendToLagoonAPI(incoming, resource, insights)
 
 			if err != nil {
-				h.RequeueAttempts++
-				if h.RequeueAttempts <= 3 {
-					rejectMessage(true)
+				incoming.RequeueAttempts++
+				updatedMessage, err := json.Marshal(incoming)
+				if err != nil {
+					fmt.Printf(err.Error())
+				}
+				if incoming.RequeueAttempts <= 3 {
+					rejectMessage(false)
+					if err := h.MessageQWriter(updatedMessage); err != nil {
+						slog.Error("Error re-queueing message", "Error", err.Error())
+					}
+					return
 				} else {
 					slog.Error("Retries failed, unable to send to the API", "Error", err.Error())
 					rejectMessage(false)
