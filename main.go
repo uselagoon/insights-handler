@@ -41,6 +41,8 @@ var (
 	enableDebug                  bool
 	problemsFromSBOM             bool
 	trivyServerEndpoint          string
+	disableConsumer              bool
+	disableWebservice            bool
 )
 
 func main() {
@@ -72,6 +74,7 @@ func main() {
 	flag.BoolVar(&enableDebug, "debug", false, "Enable debugging output")
 	flag.BoolVar(&problemsFromSBOM, "problems-from-sbom", false, "Pass any SBOM through Trivy")
 	flag.StringVar(&trivyServerEndpoint, "trivy-server-location", "http://localhost:4954", "Trivy server endpoint")
+	flag.BoolVar(&disableConsumer, "disable-broker-consumer", false, "Set this to 'true' if you'd need to run insights-handler without broker integration")
 
 	flag.Parse()
 
@@ -101,6 +104,7 @@ func main() {
 	problemsFromSBOM = getEnvBool("PROBLEMS_FROM_SBOM", problemsFromSBOM)
 	trivyServerEndpoint = getEnv("TRIVY_SERVER_ENDPOINT", trivyServerEndpoint)
 	enableDebug = getEnvBool("ENABLE_DEBUG", enableDebug)
+
 	// First we set up the default logger for the project
 
 	// If we enable debugging, we set the logging level to output debug for the default logger.
