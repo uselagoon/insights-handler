@@ -24,12 +24,12 @@ func SetupRouter(db *gorm.DB) (*gin.Engine, error) {
 	return router, nil
 }
 
-type dboptions struct {
+type Dboptions struct {
 	Filename string
 }
 
-// setUpDatabase will connect to the selected DB and run pending migrations
-func setUpDatabase(opts dboptions) (*gorm.DB, error) {
+// SetUpDatabase will connect to the selected DB and run pending migrations
+func SetUpDatabase(opts Dboptions) (*gorm.DB, error) {
 	// TODO: currently we're only supporting sqlite for dev
 	// going forward, this will run on mysql - but both should be selected
 
@@ -61,7 +61,6 @@ func DeleteFactsByEnvironmentEndpoint(c *gin.Context) {
 	}
 
 	// Retrieve optional parameters from query string
-	//service := c.Query("service")
 	source := c.Query("source")
 
 	// Retrieve the GORM database instance from the Gin context
@@ -82,10 +81,6 @@ func DeleteFactsByEnvironmentEndpoint(c *gin.Context) {
 	conditions := map[string]interface{}{
 		"environment": environmentID,
 	}
-
-	//if service != "" {
-	//	conditions["lagoon_service"] = service
-	//}
 
 	if source != "" {
 		conditions["source"] = source
@@ -143,7 +138,7 @@ func PostFactsByEnvironmentEndpoint(c *gin.Context) {
 	}
 
 	// Create the new facts in the database
-	if err := gormDB.Create(&newFacts).Error; err != nil {
+	if err := CreateFacts(gormDB, &newFacts); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create facts in the database"})
 		return
 	}

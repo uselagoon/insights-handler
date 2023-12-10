@@ -57,7 +57,7 @@ func TestDeleteFactsByEnvironmentEndpoint(t *testing.T) {
 		},
 	}
 
-	db, err := setUpDatabase(dboptions{Filename: ":memory:"})
+	db, err := SetUpDatabase(Dboptions{Filename: ":memory:"})
 	if err != nil {
 		slog.Error(err.Error())
 		os.Exit(1)
@@ -144,7 +144,7 @@ func TestPostFactsByEnvironmentEndpoint(t *testing.T) {
 		},
 	}
 
-	db, err := setUpDatabase(dboptions{Filename: ":memory:"})
+	db, err := SetUpDatabase(Dboptions{Filename: ":memory:"})
 	if err != nil {
 		slog.Error(err.Error())
 		os.Exit(1)
@@ -229,7 +229,7 @@ func TestGetFactsByEnvironmentEndpoint(t *testing.T) {
 		},
 	}
 
-	db, err := setUpDatabase(dboptions{Filename: ":memory:"})
+	db, err := SetUpDatabase(Dboptions{Filename: ":memory:"})
 	if err != nil {
 		slog.Error(err.Error())
 		os.Exit(1)
