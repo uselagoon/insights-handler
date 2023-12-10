@@ -77,24 +77,15 @@ func DeleteFactsByEnvironmentEndpoint(c *gin.Context) {
 		return
 	}
 
-	// Build conditions for deletion based on optional parameters
-	conditions := map[string]interface{}{
-		"environment": environmentID,
-	}
-
-	if source != "" {
-		conditions["source"] = source
-	}
-
 	// Delete facts based on conditions
-	result := gormDB.Where(conditions).Delete(&lagoonclient.Fact{})
-	if result.Error != nil {
+	rowsAffected, err := DeleteFacts(gormDB, environmentID, source) //gormDB.Where(conditions).Delete(&lagoonclient.Fact{})
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete facts from the database"})
 		return
 	}
 
 	// Check if any records were deleted
-	if result.RowsAffected == 0 {
+	if rowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"message": "No matching facts found for deletion"})
 		return
 	}
