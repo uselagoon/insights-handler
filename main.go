@@ -212,6 +212,24 @@ func main() {
 		DSN: fmt.Sprintf("amqp://%s:%s@%s/", broker.Username, broker.Password, broker.Hostname),
 	}
 
+	db, err := service.SetUpDatabase(service.Dboptions{Filename: "database.sql"})
+	if err != nil {
+		slog.Error(err.Error())
+		os.Exit(1)
+	}
+
+	// Start up the web service if we need it
+	if !disableWebservice {
+
+		r, err := service.SetupRouter(db)
+		if err != nil {
+			slog.Error(err.Error())
+			os.Exit(1)
+		}
+
+		go r.Run(fmt.Sprintf("%v:%v", webserviceListenAddress, webservicePort))
+	}
+
 	// Start up the consumer if we need it
 	if !disableConsumer {
 		messaging := handler.NewMessaging(config,
@@ -222,27 +240,12 @@ func main() {
 			enableDebug,
 			problemsFromSBOM,
 			trivyServerEndpoint,
+			db,
 		)
 
 		// start the consumer
 		//slog.Info("insights-handler is started-up")
 		messaging.Consumer()
-	}
-
-	// Start up the web service if we need it
-	if !disableWebservice {
-		db, err := service.SetUpDatabase(service.Dboptions{Filename: "database.sql"})
-		if err != nil {
-			slog.Error(err.Error())
-			os.Exit(1)
-		}
-		r, err := service.SetupRouter(db)
-		if err != nil {
-			slog.Error(err.Error())
-			os.Exit(1)
-		}
-
-		r.Run(fmt.Sprintf("%v:%v", webserviceListenAddress, webservicePort))
 	}
 
 }
