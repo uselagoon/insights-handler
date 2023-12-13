@@ -358,6 +358,11 @@ func processResultset(result []interface{}, err error, h *Messaging, apiClient g
 	}
 }
 
+func (h *Messaging) sendFactsToDB(facts []LagoonFact, resource ResourceDestination, source string) error {
+
+	return nil
+}
+
 func (h *Messaging) sendFactsToLagoonAPI(facts []LagoonFact, apiClient graphql.Client, resource ResourceDestination, source string) error {
 
 	slog.Debug("Matched facts",

@@ -6,6 +6,7 @@ import (
 	"github.com/Khan/genqlient/graphql"
 	"github.com/cheshir/go-mq"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient"
+	"github.com/uselagoon/lagoon/services/insights-handler/internal/service"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -30,10 +31,6 @@ func processFactsDirectly(message mq.Message, h *Messaging) string {
 		return "exciting, unable to process direct facts"
 	}
 
-	//if h.EnableDebug {
-	//	log.Print("[DEBUG] facts", directFacts)
-	//}
-	//
 	slog.Debug("Facts info", "data", directFacts)
 
 	apiClient := graphql.NewClient(h.LagoonAPI.Endpoint, &http.Client{Transport: &authedTransport{wrapped: http.DefaultTransport, h: h}})
@@ -73,7 +70,31 @@ func processFactsDirectly(message mq.Message, h *Messaging) string {
 				"Error", err,
 			)
 		}
-		//log.Printf("Deleted facts on '%v:%v' for source %v\n", directFacts.ProjectName, directFacts.EnvironmentName, s)
+
+		// Now we do the same in the DB
+		if h.DBConnection != nil {
+			n, err := directFacts.EnvironmentId.Int64()
+			if err != nil {
+				slog.Error("Unable to convert json.Number to int64",
+					"EnvironmentId", directFacts.EnvironmentId,
+					"ProjectName", directFacts.ProjectName,
+					"EnvironmentName", directFacts.EnvironmentName,
+					"Source", s,
+					"Error", err,
+				)
+			}
+			if _, err := service.DeleteFacts(h.DBConnection, int(n), s); err != nil {
+				slog.Error("Unable to delete facts from DB",
+					"EnvironmentId", directFacts.EnvironmentId,
+					"ProjectName", directFacts.ProjectName,
+					"EnvironmentName", directFacts.EnvironmentName,
+					"Source", s,
+					"Error", err,
+				)
+			}
+
+		}
+
 		slog.Info("Deleted facts",
 			"EnvironmentId", directFacts.EnvironmentId,
 			"ProjectName", directFacts.ProjectName,
@@ -85,7 +106,30 @@ func processFactsDirectly(message mq.Message, h *Messaging) string {
 	facts, err := lagoonclient.AddFacts(context.TODO(), apiClient, processedFacts)
 	if err != nil {
 		//log.Println(err)
-		slog.Error("Issue adding facts", "Error", err.Error())
+		slog.Error("Issue adding facts to API", "Error", err.Error())
+	}
+
+	// Now add facts to DB
+	if h.DBConnection != nil {
+		lagoonFacts := []lagoonclient.Fact{}
+		for _, e := range processedFacts {
+			lf := lagoonclient.Fact{
+				Environment: environmentId,
+				Name:        e.Name,
+				Value:       e.Value,
+				Source:      e.Source,
+				Description: e.Description,
+				KeyFact:     e.KeyFact,
+				Type:        e.Type,
+				Category:    e.Category,
+			}
+			lagoonFacts = append(lagoonFacts, lf)
+		}
+
+		err = service.CreateFacts(h.DBConnection, &lagoonFacts)
+		if err != nil {
+			slog.Error("Issue adding facts to DB", "Error", err.Error())
+		}
 	}
 
 	return facts

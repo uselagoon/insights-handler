@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/cheshir/go-mq"
+	"gorm.io/gorm"
 	"log/slog"
 	"sort"
 	"strconv"
@@ -19,10 +20,12 @@ type Messaging struct {
 	EnableDebug             bool
 	ProblemsFromSBOM        bool
 	TrivyServerEndpoint     string
+	DBConnection            *gorm.DB
 }
 
 // NewMessaging returns a messaging with config
-func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts int, startupInterval int, enableDebug bool, problemsFromSBOM bool, trivyServerEndpoint string) *Messaging {
+func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts int, startupInterval int, enableDebug bool, problemsFromSBOM bool, trivyServerEndpoint string, db *gorm.DB) *Messaging {
+
 	return &Messaging{
 		Config:                  config,
 		LagoonAPI:               lagoonAPI,
@@ -32,6 +35,7 @@ func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts 
 		EnableDebug:             enableDebug,
 		ProblemsFromSBOM:        problemsFromSBOM,
 		TrivyServerEndpoint:     trivyServerEndpoint,
+		DBConnection:            db,
 	}
 }
 
