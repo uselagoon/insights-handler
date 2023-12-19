@@ -61,6 +61,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 		}
 	}(message)
 
+	// Requeues the message a set number of times before rejecting it
 	rejectRequeue := func(message mq.Message) func(func(bool), *InsightsMessage, int, string, error) {
 		return func(rejectMessage func(bool), incoming *InsightsMessage, retryAttemptLimit int, target string, err error) {
 			incoming.RequeueAttempts++
@@ -208,7 +209,6 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 			slog.Error("only 'sbom', 'direct', 'raw', and 'image' types are currently supported for api processing")
 		} else {
 			err := h.sendToLagoonAPI(incoming, resource, insights)
-
 			if err != nil {
 				rejectRequeue(rejectMessage, incoming, 3, "Lagoon API", err)
 			}
