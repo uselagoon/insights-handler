@@ -91,6 +91,34 @@ func processFactsDirectly(message mq.Message, h *Messaging) string {
 	return facts
 }
 
+func deleteProblemsDirectly(message mq.Message, h *Messaging) (string, error) {
+	var deleteMessage DirectDeleteMessage
+	err := json.Unmarshal(message.Body(), &deleteMessage)
+	if err != nil {
+		return "", err
+	}
+	ret, err := lagoonclient.DeleteProblemsFromSource(context.TODO(), h.getApiClient(), deleteMessage.EnvironmentId, deleteMessage.Service, deleteMessage.Source)
+	if err != nil {
+		slog.Error("Unable to delete facts", "Error", err.Error(), "EnvironmentId", deleteMessage.EnvironmentId, "source", deleteMessage.Source, "service", deleteMessage.Service)
+		return "", err
+	}
+	return ret, nil
+}
+
+func deleteFactsDirectly(message mq.Message, h *Messaging) (string, error) {
+	var deleteMessage DirectDeleteMessage
+	err := json.Unmarshal(message.Body(), &deleteMessage)
+	if err != nil {
+		return "", err
+	}
+	ret, err := lagoonclient.DeleteFactsFromSource(context.TODO(), h.getApiClient(), deleteMessage.EnvironmentId, deleteMessage.Source)
+	if err != nil {
+		slog.Error("Unable to delete facts", "Error", err.Error(), "EnvironmentId", deleteMessage.EnvironmentId, "source", deleteMessage.Source, "service", deleteMessage.Service)
+		return "", err
+	}
+	return ret, nil
+}
+
 func processProblemsDirectly(message mq.Message, h *Messaging) ([]string, error) {
 	var directProblems DirectProblems
 	json.Unmarshal(message.Body(), &directProblems)
