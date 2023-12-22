@@ -49,7 +49,7 @@ mutation addProblem($environment: Int!,
                     $links: String,
                     $verstion: String,
                     $fixedVersion: String,
-                    $data: String!,
+                    $dataString: String!,
                    ) {
   addProblem(input: {
     environment: $environment,
@@ -63,7 +63,7 @@ mutation addProblem($environment: Int!,
     links: $links,
     version: $verstion,
     fixedVersion: $fixedVersion
-    data: $data
+    data: $dataString
   }){
     id
   }

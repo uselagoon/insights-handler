@@ -1,7 +1,7 @@
 {
-  "projectName": "test6-drupal-example-simple",
-  "environment": 1236,
-  "environmentName": "test1copy",
+  "projectName": "lagoon-demo-org",
+  "environment": 3,
+  "environmentName": "main",
   "problems": [
     {
       "environment": 3,
