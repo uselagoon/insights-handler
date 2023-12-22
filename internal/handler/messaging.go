@@ -61,7 +61,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 		}
 	}(message)
 
-	// Requeues the message a set number of times before rejecting it
+	// Requeues the message a set number of times prior to rejecting it
 	rejectRequeue := func(message mq.Message) func(func(bool), *InsightsMessage, int, string, error) {
 		return func(rejectMessage func(bool), incoming *InsightsMessage, retryAttemptLimit int, target string, err error) {
 			incoming.RequeueAttempts++
