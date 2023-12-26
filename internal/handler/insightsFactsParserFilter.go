@@ -53,7 +53,7 @@ func processFactsFromJSON(logger *slog.Logger, facts []byte, source string) []La
 	err := json.Unmarshal(facts, &factsPayload)
 	if err != nil {
 		logger.Error(err.Error())
-		panic("Can't unmarshal facts")
+		return nil
 	}
 
 	if len(factsPayload.Facts) == 0 {

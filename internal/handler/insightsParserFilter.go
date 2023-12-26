@@ -54,7 +54,8 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 
 		decoder := cdx.NewBOMDecoder(bytes.NewReader(b), cdx.BOMFileFormatJSON)
 		if err = decoder.Decode(bom); err != nil {
-			panic(err)
+			logger.Error(err.Error())
+			return nil, "", mErr
 		}
 	}
 
