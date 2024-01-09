@@ -28,7 +28,10 @@ func processFactsInsightsData(h *Messaging, insights InsightsData, v string, api
 			slog.Error("Error reading insights data", "Error", err)
 		}
 
-		facts := processFactsFromJSON(logger, res, source)
+		facts, err := processFactsFromJSON(logger, res, source)
+		if err != nil {
+			return nil, "", err
+		}
 		facts, err = KeyFactsFilter(facts)
 		if err != nil {
 			return nil, "", err
@@ -38,7 +41,6 @@ func processFactsInsightsData(h *Messaging, insights InsightsData, v string, api
 			return nil, "", fmt.Errorf("no facts to process")
 		}
 
-		//log.Printf("Successfully processed %d fact(s), for '%s:%s', from source '%s'", len(facts), resource.Project, resource.Environment, source)
 		logger.Info("Successfully processed facts", "number", len(facts))
 
 		return facts, source, nil
@@ -46,18 +48,17 @@ func processFactsInsightsData(h *Messaging, insights InsightsData, v string, api
 	return nil, "", nil
 }
 
-func processFactsFromJSON(logger *slog.Logger, facts []byte, source string) []LagoonFact {
+func processFactsFromJSON(logger *slog.Logger, facts []byte, source string) ([]LagoonFact, error) {
 	var factsInput []LagoonFact
 
 	var factsPayload FactsPayload
 	err := json.Unmarshal(facts, &factsPayload)
 	if err != nil {
-		logger.Error(err.Error())
-		return nil
+		return factsInput, err
 	}
 
 	if len(factsPayload.Facts) == 0 {
-		return factsInput
+		return factsInput, nil
 	}
 
 	var filteredFacts []LagoonFact
@@ -85,7 +86,7 @@ func processFactsFromJSON(logger *slog.Logger, facts []byte, source string) []La
 		fact, _ = ProcessLagoonFactAgainstRegisteredFilters(fact, f)
 		factsInput = append(factsInput, fact)
 	}
-	return factsInput
+	return factsInput, nil
 }
 
 func init() {
