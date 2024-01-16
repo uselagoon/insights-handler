@@ -102,6 +102,9 @@ func deleteProblemsDirectly(message mq.Message, h *Messaging) (string, error) {
 		slog.Error("Unable to delete facts", "Error", err.Error(), "EnvironmentId", deleteMessage.EnvironmentId, "source", deleteMessage.Source, "service", deleteMessage.Service)
 		return "", err
 	}
+
+	slog.Info("Deleted problems", "EnvironmentId", deleteMessage.EnvironmentId, "source", deleteMessage.Source, "service", deleteMessage.Service)
+
 	return ret, nil
 }
 
@@ -116,6 +119,8 @@ func deleteFactsDirectly(message mq.Message, h *Messaging) (string, error) {
 		slog.Error("Unable to delete facts", "Error", err.Error(), "EnvironmentId", deleteMessage.EnvironmentId, "source", deleteMessage.Source, "service", deleteMessage.Service)
 		return "", err
 	}
+	slog.Info("Deleted facts", "EnvironmentId", deleteMessage.EnvironmentId, "source", deleteMessage.Source, "service", deleteMessage.Service)
+
 	return ret, nil
 }
 
