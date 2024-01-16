@@ -88,6 +88,26 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 		return
 	}
 
+	// We also directly process deletion of problems and facts
+	if incoming.Type == "direct.delete.problems" {
+		slog.Debug("Deleting problems")
+		_, err := deleteProblemsDirectly(message, h)
+		if err != nil {
+			slog.Error(err.Error())
+		}
+		acknowledgeMessage() // Should we be acknowledging this error?
+		return
+	}
+
+	if incoming.Type == "direct.delete.facts" {
+		_, err := deleteFactsDirectly(message, h)
+		if err != nil {
+			slog.Error(err.Error())
+		}
+		acknowledgeMessage() // Should we be acknowledging this error?
+		return
+	}
+
 	// Check labels for insights data from message
 	if incoming.Labels != nil {
 		labelKeys := make([]string, 0, len(incoming.Labels))

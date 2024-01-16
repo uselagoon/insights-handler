@@ -104,6 +104,14 @@ type DirectProblems struct {
 	Problems        []lagoonclient.LagoonProblem `json:"problems"`
 	Type            string                       `json:"type"`
 }
+
+type DirectDeleteMessage struct {
+	Type          string `json:"type"`
+	EnvironmentId int    `json:"environment"`
+	Source        string `json:"source"`
+	Service       string `json:"service"`
+}
+
 type InsightsData struct {
 	InputType               string
 	InputPayload            PayloadType
