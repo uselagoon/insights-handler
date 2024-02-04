@@ -28,7 +28,11 @@ func processFactsInsightsData(h *Messaging, insights InsightsData, v string, api
 			slog.Error("Error reading insights data", "Error", err)
 		}
 
-		facts := processFactsFromJSON(logger, res, source)
+		facts, err := processFactsFromJSON(logger, res, source)
+		if err != nil {
+			return nil, "", err
+		}
+
 		facts, err = KeyFactsFilter(facts)
 		if err != nil {
 			return nil, "", err
@@ -46,18 +50,17 @@ func processFactsInsightsData(h *Messaging, insights InsightsData, v string, api
 	return nil, "", nil
 }
 
-func processFactsFromJSON(logger *slog.Logger, facts []byte, source string) []LagoonFact {
+func processFactsFromJSON(logger *slog.Logger, facts []byte, source string) ([]LagoonFact, error) {
 	var factsInput []LagoonFact
 
 	var factsPayload FactsPayload
 	err := json.Unmarshal(facts, &factsPayload)
 	if err != nil {
-		logger.Error(err.Error())
-		panic("Can't unmarshal facts")
+		return factsInput, err
 	}
 
 	if len(factsPayload.Facts) == 0 {
-		return factsInput
+		return factsInput, nil
 	}
 
 	var filteredFacts []LagoonFact
@@ -82,10 +85,13 @@ func processFactsFromJSON(logger *slog.Logger, facts []byte, source string) []La
 			Type:        FactTypeText,
 		}
 		logger.Debug("Processing fact", "name", f.Name, "value", f.Value)
-		fact, _ = ProcessLagoonFactAgainstRegisteredFilters(fact, f)
+		fact, err = ProcessLagoonFactAgainstRegisteredFilters(fact, f)
+		if err != nil {
+			return factsInput, err
+		}
 		factsInput = append(factsInput, fact)
 	}
-	return factsInput
+	return factsInput, nil
 }
 
 func init() {

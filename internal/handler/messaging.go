@@ -212,7 +212,6 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 			err := h.sendToLagoonAPI(incoming, resource, insights)
 
 			if err != nil {
-				//log.Printf("Unable to send to the api: %s", err.Error())
 				slog.Error("Unable to send to the API", "Error", err.Error())
 				rejectMessage(false)
 				return
