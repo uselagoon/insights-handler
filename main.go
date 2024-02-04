@@ -3,13 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
+	"github.com/cheshir/go-mq"
+	"github.com/uselagoon/lagoon/services/insights-handler/internal/handler"
+	"log/slog"
 	"os"
 	"strconv"
 	"time"
-
-	"github.com/cheshir/go-mq"
-	"github.com/uselagoon/lagoon/services/insights-handler/internal/handler"
 )
 
 var (
@@ -40,6 +39,8 @@ var (
 	disableS3Upload              bool
 	disableAPIIntegration        bool
 	enableDebug                  bool
+	problemsFromSBOM             bool
+	trivyServerEndpoint          string
 )
 
 func main() {
@@ -69,6 +70,9 @@ func main() {
 	flag.BoolVar(&disableS3Upload, "disable-s3-upload", false, "Disable uploading insights data to an s3 s3Bucket")
 	flag.BoolVar(&disableAPIIntegration, "disable-api-integration", false, "Disable insights data integration for the Lagoon API")
 	flag.BoolVar(&enableDebug, "debug", false, "Enable debugging output")
+	flag.BoolVar(&problemsFromSBOM, "problems-from-sbom", false, "Pass any SBOM through Trivy")
+	flag.StringVar(&trivyServerEndpoint, "trivy-server-location", "http://localhost:4954", "Trivy server endpoint")
+
 	flag.Parse()
 
 	handler.EnableDebug = enableDebug
@@ -94,6 +98,29 @@ func main() {
 	s3useSSL = getEnvBool("S3_USESSL", s3useSSL)
 	disableAPIIntegration = getEnvBool("INSIGHTS_DISABLE_API_INTEGRATION", disableAPIIntegration)
 	disableS3Upload = getEnvBool("INSIGHTS_DISABLE_S3_UPLOAD", disableS3Upload)
+	problemsFromSBOM = getEnvBool("PROBLEMS_FROM_SBOM", problemsFromSBOM)
+	trivyServerEndpoint = getEnv("TRIVY_SERVER_ENDPOINT", trivyServerEndpoint)
+	enableDebug = getEnvBool("ENABLE_DEBUG", enableDebug)
+	// First we set up the default logger for the project
+
+	// If we enable debugging, we set the logging level to output debug for the default logger.
+	// This means we don't need to wrap debug info, simply log it at the right level
+	debugLevel := slog.LevelInfo
+	if enableDebug {
+		debugLevel = slog.LevelDebug
+	}
+
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: debugLevel,
+	})))
+
+	slog.Debug("problemsFromSBOM", "status", problemsFromSBOM)
+	if problemsFromSBOM == true {
+		if trivyServerEndpoint == "" {
+			slog.Error("NO TRIVY SERVER ENDPOINT SET - exiting")
+			os.Exit(1)
+		}
+	}
 
 	// configure the backup handler settings
 	broker := handler.RabbitBroker{
@@ -121,13 +148,13 @@ func main() {
 		Disabled:        disableS3Upload,
 	}
 
-	log.Println("Registering Fact Filters/Transformer")
+	slog.Debug("disableS3Upload", "status", disableS3Upload)
+
 	err := handler.RegisterFiltersFromDisk(filterTransformerFile)
 	if err != nil {
-		log.Println(err)
+		// TODO: BETTER ERROR HANDLING
+		slog.Error("Unable to register filters from disk", "Error", err)
 	}
-
-	log.Println("insights-handler running...")
 
 	config := mq.Config{
 		ReconnectDelay: time.Duration(rabbitReconnectRetryInterval) * time.Second,
@@ -177,9 +204,12 @@ func main() {
 		startupConnectionAttempts,
 		startupConnectionInterval,
 		enableDebug,
+		problemsFromSBOM,
+		trivyServerEndpoint,
 	)
 
 	// start the consumer
+	//slog.Info("insights-handler is started-up")
 	messaging.Consumer()
 }
 

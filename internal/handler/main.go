@@ -11,6 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -94,6 +95,21 @@ type DirectFacts struct {
 	Facts           []DirectFact `json:"facts"`
 	Type            string       `json:"type"`
 	InsightsType    string       `json:"insightsType"`
+}
+
+type DirectProblems struct {
+	EnvironmentId   int                          `json:"environment"`
+	ProjectName     string                       `json:"projectName"`
+	EnvironmentName string                       `json:"environmentName"`
+	Problems        []lagoonclient.LagoonProblem `json:"problems"`
+	Type            string                       `json:"type"`
+}
+
+type DirectDeleteMessage struct {
+	Type          string `json:"type"`
+	EnvironmentId int    `json:"environment"`
+	Source        string `json:"source"`
+	Service       string `json:"service"`
 }
 
 type InsightsData struct {
@@ -202,6 +218,7 @@ type ResourceDestination struct {
 // Consumer handles consuming messages sent to the queue that this action handler is connected to and processes them accordingly
 func (h *Messaging) Consumer() {
 	var messageQueue mq.MQ
+
 	// if no mq is found when the goroutine starts, retry a few times before exiting
 	// default is 10 retry with 30 second delay = 5 minutes
 	err := try.Do(func(attempt int) (bool, error) {
@@ -221,23 +238,28 @@ func (h *Messaging) Consumer() {
 		return attempt < h.ConnectionAttempts, err
 	})
 	if err != nil {
-		log.Fatalf("Finally failed to initialize message queue manager: %v", err)
+		//log.Fatalf("Finally failed to initialize message queue manager: %v", err)
+		slog.Error("Finally failed to initialize message queue manager", "error", err.Error())
+		os.Exit(1)
 	}
 	defer messageQueue.Close()
 
 	go func() {
 		for err := range messageQueue.Error() {
-			log.Println(fmt.Sprintf("Caught error from message queue: %v", err))
+			//log.Println(fmt.Sprintf("Caught error from message queue: %v", err))
+			slog.Error("Caught error from message queue", "Error", err.Error())
 		}
 	}()
 
 	forever := make(chan bool)
 
 	// Handle any tasks that go to the queue
-	log.Println("Listening for messages in queue lagoon-insights:items")
+	//log.Println("Listening for messages in queue lagoon-insights:items")
+	slog.Info("Listening for messages", "queue", "lagoon-insights:items")
 	err = messageQueue.SetConsumerHandler("items-queue", h.processMessageQueue)
 	if err != nil {
-		log.Println(fmt.Sprintf("Failed to set handler to consumer `%s`: %v", "items-queue", err))
+		//log.Println(fmt.Sprintf("Failed to set handler to consumer `%s`: %v", "items-queue", err))
+		slog.Error("Failed to set handler", "consumer", "items-queue", "error", err.Error())
 	}
 	<-forever
 }
@@ -252,9 +274,7 @@ func (t *authedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	token, err := jwt.OneMinuteAdminToken(t.h.LagoonAPI.TokenSigningKey, t.h.LagoonAPI.JWTAudience, t.h.LagoonAPI.JWTSubject, t.h.LagoonAPI.JWTIssuer)
 	if err != nil {
 		// the token wasn't generated
-		if t.h.EnableDebug {
-			log.Println(err)
-		}
+		slog.Debug("Error while creating JWT", "error", err.Error())
 		return nil, err
 	}
 	req.Header.Set("Authorization", "bearer "+token)
@@ -266,16 +286,16 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 	apiClient := h.getApiClient()
 
 	if resource.Project == "" && resource.Environment == "" {
-		log.Println("no resource definition labels could be found in payload (i.e. lagoon.sh/project or lagoon.sh/environment)")
+		return fmt.Errorf("no resource definition labels could be found in payload (i.e. lagoon.sh/project or lagoon.sh/environment)")
 	}
 
-	if insights.InputPayload == Payload {
+	if insights.InputPayload == Payload && insights.LagoonType == Facts {
 		for _, p := range incoming.Payload {
 			parserFilterLoopForPayloads(insights, p, h, apiClient, resource)
 		}
 	}
 
-	if insights.InputPayload == BinaryPayload {
+	if insights.InputPayload == BinaryPayload && insights.LagoonType == Facts {
 		for _, p := range incoming.BinaryPayload {
 			parserFilterLoopForBinaryPayloads(insights, p, h, apiClient, resource)
 		}
@@ -286,30 +306,13 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 
 func parserFilterLoopForBinaryPayloads(insights InsightsData, p string, h *Messaging, apiClient graphql.Client, resource ResourceDestination) {
 	for _, filter := range parserFilters {
-		
-		if insights.LagoonType == Facts { // This should be more or less trivially true
 
-			result, source, err := filter(h, insights, p, apiClient, resource)
-			if err != nil {
-				log.Println(fmt.Errorf(err.Error()))
-			}
-
-			for _, r := range result {
-				if fact, ok := r.(LagoonFact); ok {
-					// Handle single fact
-					err = h.sendFactsToLagoonAPI([]LagoonFact{fact}, apiClient, resource, source)
-					if err != nil {
-						fmt.Println(err)
-					}
-				} else if facts, ok := r.([]LagoonFact); ok {
-					// Handle slice of facts
-					h.sendFactsToLagoonAPI(facts, apiClient, resource, source)
-				} else {
-					// Unexpected type returned from filter()
-					log.Printf("unexpected type returned from filter(): %T\n", r)
-				}
-			}
+		result, source, err := filter(h, insights, p, apiClient, resource)
+		if err != nil {
+			slog.Error("Error running filter", "error", err.Error())
 		}
+
+		processResultset(result, err, h, apiClient, resource, source)
 	}
 }
 
@@ -318,54 +321,62 @@ func parserFilterLoopForPayloads(insights InsightsData, p PayloadInput, h *Messa
 		var result []interface{}
 		var source string
 
-		if insights.LagoonType == Facts { // This should be more or less trivially true
-			json, err := json.Marshal(p)
-			if err != nil {
-				log.Println(fmt.Errorf(err.Error()))
-			}
-
-			result, source, err = filter(h, insights, fmt.Sprintf("%s", json), apiClient, resource)
-			if err != nil {
-				log.Println(fmt.Errorf(err.Error()))
-			}
-
-			for _, r := range result {
-				if fact, ok := r.(LagoonFact); ok {
-					// Handle single fact
-					err = h.sendFactsToLagoonAPI([]LagoonFact{fact}, apiClient, resource, source)
-					if err != nil {
-						fmt.Println(err)
-					}
-				} else if facts, ok := r.([]LagoonFact); ok {
-					// Handle slice of facts
-					h.sendFactsToLagoonAPI(facts, apiClient, resource, source)
-				} else {
-					// Unexpected type returned from filter()
-					log.Printf("unexpected type returned from filter(): %T\n", r)
-				}
-			}
+		json, err := json.Marshal(p)
+		if err != nil {
+			slog.Error("Error marshalling data", "error", err.Error())
 		}
+
+		result, source, err = filter(h, insights, fmt.Sprintf("%s", json), apiClient, resource)
+		if err != nil {
+			slog.Error("Error Filtering payload", "error", err.Error())
+		}
+
+		processResultset(result, err, h, apiClient, resource, source)
 	}
 }
 
-func (h *Messaging) sendFactsToLagoonAPI(facts []LagoonFact, apiClient graphql.Client, resource ResourceDestination, source string) error {
+// processResultset will send results as facts to the lagoon api after processing via a parser filter
+func processResultset(result []interface{}, err error, h *Messaging, apiClient graphql.Client, resource ResourceDestination, source string) {
 	project, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
 	if apiErr != nil {
 		log.Println(apiErr)
-	}
-	if EnableDebug {
-		log.Printf("[DEBUG] matched %d number of fact(s) for '%v:%v', from source '%s'", len(facts), project.Name, environment, source)
 	}
 
 	// Even if we don't find any new facts, we need to delete the existing ones
 	// since these may be the end product of a filter process
 	apiErr = h.deleteExistingFactsBySource(apiClient, environment, source, project)
 	if apiErr != nil {
-		return fmt.Errorf("%s", apiErr.Error())
+		log.Printf("%s", apiErr.Error())
 	}
 
+	for _, r := range result {
+		if fact, ok := r.(LagoonFact); ok {
+			// Handle single fact
+			err = h.sendFactsToLagoonAPI([]LagoonFact{fact}, apiClient, resource, source)
+			if err != nil {
+				slog.Error("Error sending facts to Lagoon API", "error", err.Error())
+			}
+		} else if facts, ok := r.([]LagoonFact); ok {
+			// Handle slice of facts
+			h.sendFactsToLagoonAPI(facts, apiClient, resource, source)
+		} else {
+			// Unexpected type returned from filter()
+			slog.Error(fmt.Sprintf("unexpected type returned from filter(): %T\n", r))
+		}
+	}
+}
+
+func (h *Messaging) sendFactsToLagoonAPI(facts []LagoonFact, apiClient graphql.Client, resource ResourceDestination, source string) error {
+
+	slog.Debug("Matched facts",
+		"Number", len(facts),
+		"ProjectName", resource.Project,
+		"EnvironmentId", resource.Environment,
+		"Source", source,
+	)
+
 	if len(facts) > 0 {
-		apiErr = h.pushFactsToLagoonApi(facts, resource)
+		apiErr := h.pushFactsToLagoonApi(facts, resource)
 		if apiErr != nil {
 			return fmt.Errorf("%s", apiErr.Error())
 		}
@@ -381,7 +392,14 @@ func (h *Messaging) deleteExistingFactsBySource(apiClient graphql.Client, enviro
 		return err
 	}
 
-	log.Printf("Previous facts deleted for '%s:%s' and source '%s'", project.Name, environment.Name, source)
+	slog.Info("Previous facts deleted",
+		"ProjectId", project.Id,
+		"ProjectName", project.Name,
+		"EnvironmentId", environment.Id,
+		"EnvironmentName", environment.Name,
+		"Source", source,
+	)
+
 	return nil
 }
 
@@ -394,11 +412,11 @@ func determineResourceFromLagoonAPI(apiClient graphql.Client, resource ResourceD
 	// Get project data (we need the project ID to be able to utilise the environmentByName query)
 	project, err := lagoonclient.GetProjectByName(context.TODO(), apiClient, resource.Project)
 	if err != nil {
-		return lagoonclient.Project{}, lagoonclient.Environment{}, fmt.Errorf("error: unable to determine resource destination (does %s:%s exist?)", resource.Project, resource.Environment)
+		return lagoonclient.Project{}, lagoonclient.Environment{}, fmt.Errorf("error: unable to determine resource destination (does %s:%s exist?): %v", resource.Project, resource.Environment, err.Error())
 	}
 
 	if project.Id == 0 || project.Name == "" {
-		return lagoonclient.Project{}, lagoonclient.Environment{}, fmt.Errorf("error: unable to determine resource destination (does %s:%s exist?)", resource.Project, resource.Environment)
+		return lagoonclient.Project{}, lagoonclient.Environment{}, fmt.Errorf("error: unable to determine resource destination (does %s:%s exist?): %v", resource.Project, resource.Environment, err.Error())
 	}
 
 	environment, err := lagoonclient.GetEnvironmentFromName(context.TODO(), apiClient, resource.Environment, project.Id)
@@ -432,7 +450,7 @@ func (h *Messaging) sendToLagoonS3(incoming *InsightsMessage, insights InsightsD
 			return err
 		}
 	} else {
-		log.Printf("Successfully created %s", h.S3Config.Bucket)
+		slog.Info(fmt.Sprintf("Successfully created %s", h.S3Config.Bucket))
 	}
 
 	if len(incoming.Payload) != 0 {
@@ -451,14 +469,14 @@ func (h *Messaging) sendToLagoonS3(incoming *InsightsMessage, insights InsightsD
 			return putObjErr
 		}
 
-		log.Printf("Successfully uploaded %s of size %d", objectName, info.Size)
+		slog.Info(fmt.Sprintf("Successfully uploaded %s of size %d", objectName, info.Size))
 	}
 
 	if len(incoming.BinaryPayload) != 0 {
 		for _, p := range incoming.BinaryPayload {
 			result, err := decodeGzipString(p)
 			if err != nil {
-				fmt.Errorf(err.Error())
+				return err
 			}
 			resultJson, _ := json.MarshalIndent(result, "", " ")
 
@@ -476,7 +494,7 @@ func (h *Messaging) sendToLagoonS3(incoming *InsightsMessage, insights InsightsD
 			if insights.OutputCompressed != true {
 				err = ioutil.WriteFile(tempFilePath, resultJson, 0644)
 				if err != nil {
-					fmt.Errorf(err.Error())
+					return err
 				}
 			} else {
 				var buf bytes.Buffer
@@ -485,7 +503,7 @@ func (h *Messaging) sendToLagoonS3(incoming *InsightsMessage, insights InsightsD
 				gz.Close()
 				err = ioutil.WriteFile(tempFilePath, buf.Bytes(), 0644)
 				if err != nil {
-					fmt.Errorf(err.Error())
+					return err
 				}
 			}
 
@@ -495,13 +513,13 @@ func (h *Messaging) sendToLagoonS3(incoming *InsightsMessage, insights InsightsD
 				ContentEncoding: contentEncoding,
 			})
 			if err != nil {
-				fmt.Errorf(err.Error())
+				return err
 			}
-			log.Printf("Successfully uploaded %s of size %d\n", s3FilePath, info.Size)
+			slog.Info(fmt.Sprintf("Successfully uploaded %s of size %d", s3FilePath, info.Size))
 
 			err = os.Remove(tempFilePath)
 			if err != nil {
-				fmt.Errorf(err.Error())
+				return err
 			}
 		}
 	}
@@ -511,11 +529,16 @@ func (h *Messaging) sendToLagoonS3(incoming *InsightsMessage, insights InsightsD
 
 // pushFactsToLagoonApi acts as the interface between GraphQL and internal Types
 func (h *Messaging) pushFactsToLagoonApi(facts []LagoonFact, resource ResourceDestination) error {
+
+	logger := slog.With(
+		"ProjectName", resource.Project,
+		"EnvironmentName", resource.Environment,
+	)
 	apiClient := graphql.NewClient(h.LagoonAPI.Endpoint, &http.Client{Transport: &authedTransport{wrapped: http.DefaultTransport, h: h}})
 
-	if EnableDebug {
-		log.Printf("[DEBUG] attempting to add %d fact(s)...", len(facts))
-	}
+	slog.Debug("Attempting to add facts",
+		"Number", len(facts),
+	)
 
 	processedFacts := make([]lagoonclient.AddFactInput, len(facts))
 	for i, fact := range facts {
@@ -530,6 +553,7 @@ func (h *Messaging) pushFactsToLagoonApi(facts []LagoonFact, resource ResourceDe
 			Type:        lagoonclient.FactType(fact.Type),
 			Category:    fact.Category,
 		}
+
 	}
 
 	result, err := lagoonclient.AddFacts(context.TODO(), apiClient, processedFacts)
@@ -539,11 +563,13 @@ func (h *Messaging) pushFactsToLagoonApi(facts []LagoonFact, resource ResourceDe
 
 	if h.EnableDebug {
 		for _, fact := range facts {
-			log.Println("[DEBUG]", fact.Name, ":", fact.Value)
+			logger.Debug("Added fact", "Name", fact.Name, "Value", fact.Value)
 		}
 	}
 
-	log.Println(result)
+	logger.Debug("Response from API",
+		"result", result,
+	)
 	return nil
 }
 
@@ -566,6 +592,7 @@ func decodeGzipString(encodedString string) (result interface{}, err error) {
 	return data, nil
 }
 
+// TODO: this seems to be dead code. Remove?
 func scanKeyFactsFile(file string) ([]string, error) {
 	var expectedKeyFacts []string
 
@@ -587,8 +614,11 @@ func scanKeyFactsFile(file string) ([]string, error) {
 		}
 	}
 	if err := sc.Err(); err != nil {
-		log.Fatalf("scan file error: %v", err)
-		return nil, err
+		//TODO: Note that the pre-refactored behaviour is a FatalF, which should just exit the service completely
+		//log.Fatalf("scan file error: %v", err)
+		//return nil, err
+		slog.Error("Scan file Error", "Error", err.Error())
+		os.Exit(1)
 	}
 	return expectedKeyFacts, nil
 }
@@ -597,13 +627,13 @@ func scanKeyFactsFile(file string) ([]string, error) {
 func (h *Messaging) toLagoonInsights(messageQueue mq.MQ, message map[string]interface{}) {
 	msgBytes, err := json.Marshal(message)
 	if err != nil {
-		if h.EnableDebug {
-			log.Println("[DEBUG]", err, "Unable to encode message as JSON")
-		}
+		// TODO: BETTER ERROR HANDLING
+		slog.Debug("Unable to encode message as JSON", "Error", err.Error())
 	}
 	producer, err := messageQueue.AsyncProducer("lagoon-insights")
 	if err != nil {
-		log.Println(fmt.Sprintf("Failed to get async producer: %v", err))
+		// TODO: BETTER ERROR HANDLING
+		slog.Debug("Failed to get async producer", "Error", err.Error())
 		return
 	}
 	producer.Produce(msgBytes)

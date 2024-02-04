@@ -5,8 +5,8 @@
   },
   "annotations": {},
   "labels": {
-    "lagoon.sh/project": "high-cotton",
-    "lagoon.sh/environment": "Master",
+    "lagoon.sh/project": "lagoon-demo-org",
+    "lagoon.sh/environment": "main",
     "lagoon.sh/service": "cli",
     "lagoon.sh/insightsType": "image-gz",
     "lagoon.sh/insightsOutputCompressed": "true"

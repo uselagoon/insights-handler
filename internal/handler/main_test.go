@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"io/ioutil"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -122,13 +123,13 @@ func Test_processDirectFacts(t *testing.T) {
 
 			fmt.Println(string(message.Body()))
 
-			got := processItemsDirectly(tt.args.message, tt.args.h)
+			got := processFactsDirectly(tt.args.message, tt.args.h)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("processItemsDirectly() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("processFactsDirectly() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("processItemsDirectly() got = %v, want %v", got, tt.want)
+				t.Errorf("processFactsDirectly() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -200,7 +201,7 @@ func Test_processFactsFromSBOM(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := processFactsFromSBOM(tt.args.bom, tt.args.environmentId, tt.args.source)
+			got := processFactsFromSBOM(slog.Default(), tt.args.bom, tt.args.environmentId, tt.args.source)
 			if len(got) != len(tt.want) {
 				t.Errorf("processFactsFromSBOM() returned %d results, want %d", len(got), len(tt.want))
 			}

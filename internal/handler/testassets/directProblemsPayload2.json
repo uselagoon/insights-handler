@@ -1,0 +1,20 @@
+{
+  "environment": 3,
+  "projectName": "lagoon-demo-org",
+  "environmentName": "main",
+  "problems": [
+    {
+      "environment": 3,
+      "identifier": "1234",
+      "version": "1.0.1",
+      "fixedVersion": "1.0.2",
+      "source": "test",
+      "service": "cli",
+      "data": "{}",
+      "severity": "CRITICAL",
+      "severityScore": 0.5,
+      "description": "This is a test 1"
+    }
+  ],
+  "type": "direct.problems"
+}
