@@ -96,7 +96,7 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 	//log.Printf("Successfully decoded SBOM of image %s with %s, found %d for '%s:%s'", bom.Metadata.Component.Name, (*bom.Metadata.Tools)[0].Name, len(*bom.Components), resource.Project, resource.Environment)
 	logger.Info("Successfully decoded SBOM",
 		"image", bom.Metadata.Component.Name,
-		"fieldName", (*bom.Metadata.Tools)[0].Name,
+		"fieldName", (*bom.Metadata.Tools.Components)[0].Name,
 		"Length", len(*bom.Components),
 	)
 
