@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM golang:1.21.4-alpine3.18 as builder
+FROM golang:1.22.0-alpine3.18 as builder
 
 COPY . /go/src/github.com/uselagoon/lagoon/services/insights-handler/
 WORKDIR /go/src/github.com/uselagoon/lagoon/services/insights-handler/
@@ -21,7 +21,7 @@ FROM aquasec/trivy:0.49.0 as trivy
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 #FROM gcr.io/distroless/static:nonroot
 
-FROM alpine:3.18
+FROM alpine:3.19
 
 COPY --from=trivy /usr/local/bin/trivy /usr/local/bin/trivy
 
