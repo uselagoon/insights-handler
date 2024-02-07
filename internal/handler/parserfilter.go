@@ -16,26 +16,16 @@ type parserFilter interface {
 	getFact() LagoonFact
 }
 
-type ParserFilterFunc[T any] func(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]T, string, error)
+type ParserFilterFunc func(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonFact, string, error)
 
-var parserFilters []ParserFilterFunc[interface{}]
+var parserFilters []ParserFilterFunc
 
-// Since Go does not allow type conversions between slices of different types, ([]T and []interface{}) are considered different types, and you cannot assign one to the other.
-// Therefore  this func will convert the []T slice to a []interface{} slice
-func ToInterfaceSlice[T any](slice []T) []interface{} {
-	result := make([]interface{}, len(slice))
-	for i, v := range slice {
-		result[i] = v
-	}
-	return result
-}
-
-func RegisterParserFilter[T any](pf ParserFilterFunc[T]) {
-	parserFilters = append(parserFilters, func(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]interface{}, string, error) {
+func RegisterParserFilter(pf ParserFilterFunc) {
+	parserFilters = append(parserFilters, func(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonFact, string, error) {
 		result, source, err := pf(h, insights, v, apiClient, resource)
 		if err != nil {
 			return nil, "", err
 		}
-		return ToInterfaceSlice(result), source, nil
+		return result, source, nil
 	})
 }

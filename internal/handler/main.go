@@ -329,7 +329,7 @@ func parserFilterLoopForBinaryPayloads(insights InsightsData, p string, h *Messa
 
 func parserFilterLoopForPayloads(insights InsightsData, p PayloadInput, h *Messaging, apiClient graphql.Client, resource ResourceDestination) error {
 	for _, filter := range parserFilters {
-		var result []interface{}
+		var result []LagoonFact
 		var source string
 
 		json, err := json.Marshal(p)
@@ -353,7 +353,7 @@ func parserFilterLoopForPayloads(insights InsightsData, p PayloadInput, h *Messa
 }
 
 // processResultset will send results as facts to the lagoon api after processing via a parser filter
-func processResultset(result []interface{}, err error, h *Messaging, apiClient graphql.Client, resource ResourceDestination, source string) error {
+func processResultset(result []LagoonFact, err error, h *Messaging, apiClient graphql.Client, resource ResourceDestination, source string) error {
 	project, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
 	if apiErr != nil {
 		slog.Error(apiErr.Error())
@@ -368,28 +368,12 @@ func processResultset(result []interface{}, err error, h *Messaging, apiClient g
 		return apiErr
 	}
 
-	for _, r := range result {
-		if fact, ok := r.(LagoonFact); ok {
-			// Handle single fact
-			err = h.sendFactsToLagoonAPI([]LagoonFact{fact}, apiClient, resource, source)
-			if err != nil {
-				slog.Error("Error sending facts to Lagoon API", "error", err.Error())
-				return err
-			}
-		} else if facts, ok := r.([]LagoonFact); ok {
-			// Handle slice of facts
-			err = h.sendFactsToLagoonAPI(facts, apiClient, resource, source)
-			if err != nil {
-				slog.Error("Error sending facts to Lagoon API", "error", err.Error())
-				return err
-			}
-		} else {
-			// Unexpected type returned from filter()
-			err := fmt.Errorf("unexpected type returned from filter(): %T\n", r)
-			slog.Error(err.Error())
-			return err
-		}
+	err = h.sendFactsToLagoonAPI(result, apiClient, resource, source)
+	if err != nil {
+		slog.Error("Error sending facts to Lagoon API", "error", err.Error())
+		return err
 	}
+
 	return nil
 }
 
