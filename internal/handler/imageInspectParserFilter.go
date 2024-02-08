@@ -27,37 +27,43 @@ func processImageInspectInsightsData(h *Messaging, insights InsightsData, v stri
 	source := fmt.Sprintf("insights:image:%s", resource.Service)
 	logger := slog.With("ProjectName", resource.Project, "EnvironmentName", resource.Environment, "Source", source)
 	if insights.InsightsType == Image {
-		decoded, err := decodeGzipString(v)
-		if err != nil {
-			return nil, "", err
-		}
 
 		_, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
 		if apiErr != nil {
 			return nil, "", apiErr
 		}
+		environmentId := environment.Id
 
-		marshallDecoded, err := json.Marshal(decoded)
-		var imageInspect ImageData
-
-		err = json.Unmarshal(marshallDecoded, &imageInspect)
-		if err != nil {
-			return nil, "", err
-		}
-
-		facts, err := processFactsFromImageInspect(logger, imageInspect, environment.Id, source)
-		if err != nil {
-			return nil, "", err
-		}
-		logger.Info("Successfully decoded image-inspect")
-		facts, err = KeyFactsFilter(facts)
-		if err != nil {
-			return nil, "", err
-		}
-
-		return facts, source, nil
+		return ProcessImageInspectData(v, logger, environmentId, source)
 	}
 	return []LagoonFact{}, "", nil
+}
+
+func ProcessImageInspectData(v string, logger *slog.Logger, environmentId int, source string) ([]LagoonFact, string, error) {
+	decoded, err := decodeGzipString(v)
+	if err != nil {
+		return nil, "", err
+	}
+
+	marshallDecoded, err := json.Marshal(decoded)
+	var imageInspect ImageData
+
+	err = json.Unmarshal(marshallDecoded, &imageInspect)
+	if err != nil {
+		return nil, "", err
+	}
+
+	facts, err := processFactsFromImageInspect(logger, imageInspect, environmentId, source)
+	if err != nil {
+		return nil, "", err
+	}
+	logger.Info("Successfully decoded image-inspect")
+	facts, err = KeyFactsFilter(facts)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return facts, source, nil
 }
 
 func processFactsFromImageInspect(logger *slog.Logger, imageInspectData ImageData, id int, source string) ([]LagoonFact, error) {
