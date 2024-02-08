@@ -23,39 +23,9 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 		return []LagoonFact{}, "", nil
 	}
 
-	bom := new(cdx.BOM)
-
-	// Decode base64
-	r := strings.NewReader(v)
-	dec := base64.NewDecoder(base64.StdEncoding, r)
-
-	res, err := ioutil.ReadAll(dec)
+	bom, err := getBOMfromPayload(v)
 	if err != nil {
-		return nil, "", err
-	}
-
-	fileType := http.DetectContentType(res)
-
-	if fileType != "application/zip" && fileType != "application/x-gzip" && fileType != "application/gzip" {
-		decoder := cdx.NewBOMDecoder(bytes.NewReader(res), cdx.BOMFileFormatJSON)
-		if err = decoder.Decode(bom); err != nil {
-			return nil, "", err
-		}
-	} else {
-		// Compressed cyclonedx sbom
-		result, decErr := decodeGzipString(v)
-		if decErr != nil {
-			return nil, "", decErr
-		}
-		b, mErr := json.MarshalIndent(result, "", " ")
-		if mErr != nil {
-			return nil, "", mErr
-		}
-
-		decoder := cdx.NewBOMDecoder(bytes.NewReader(b), cdx.BOMFileFormatJSON)
-		if err = decoder.Decode(bom); err != nil {
-			return nil, "", err
-		}
+		return []LagoonFact{}, "", err
 	}
 
 	// Determine lagoon resource destination
@@ -65,7 +35,7 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 	}
 
 	// we process the SBOM here
-
+	// TODO: This should actually live in its own function somewhere else.
 	if h.ProblemsFromSBOM == true {
 		isAlive, err := IsTrivyServerIsAlive(h.TrivyServerEndpoint)
 		if err != nil {
@@ -101,6 +71,45 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 	)
 
 	return facts, source, nil
+}
+
+// getBOMfromPayload is used to extract a *cdx.BOM from an incoming payload
+func getBOMfromPayload(v string) (*cdx.BOM, error) {
+	bom := new(cdx.BOM)
+
+	// Decode base64
+	r := strings.NewReader(v)
+	dec := base64.NewDecoder(base64.StdEncoding, r)
+
+	res, err := ioutil.ReadAll(dec)
+	if err != nil {
+		return nil, err
+	}
+
+	fileType := http.DetectContentType(res)
+
+	if fileType != "application/zip" && fileType != "application/x-gzip" && fileType != "application/gzip" {
+		decoder := cdx.NewBOMDecoder(bytes.NewReader(res), cdx.BOMFileFormatJSON)
+		if err = decoder.Decode(bom); err != nil {
+			return nil, err
+		}
+	} else {
+		// Compressed cyclonedx sbom
+		result, decErr := decodeGzipString(v)
+		if decErr != nil {
+			return nil, decErr
+		}
+		b, mErr := json.MarshalIndent(result, "", " ")
+		if mErr != nil {
+			return nil, mErr
+		}
+
+		decoder := cdx.NewBOMDecoder(bytes.NewReader(b), cdx.BOMFileFormatJSON)
+		if err = decoder.Decode(bom); err != nil {
+			return nil, err
+		}
+	}
+	return bom, nil
 }
 
 func processFactsFromSBOM(logger *slog.Logger, facts *[]cdx.Component, environmentId int, source string) []LagoonFact {

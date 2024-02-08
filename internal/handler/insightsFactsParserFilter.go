@@ -19,35 +19,36 @@ func processFactsInsightsData(h *Messaging, insights InsightsData, v string, api
 	source := fmt.Sprintf("insights:facts:%s", resource.Service)
 	logger := slog.With("ProjectName", resource.Project, "EnvironmentName", resource.Environment, "Source", source)
 	if insights.LagoonType == Facts && insights.InsightsType == Raw {
-		r := strings.NewReader(v)
-
-		// Decode base64
-		//dec := base64.NewDecoder(base64.StdEncoding, r)
-		res, err := ioutil.ReadAll(r)
-		if err != nil {
-			slog.Error("Error reading insights data", "Error", err)
-		}
-
-		facts, err := processFactsFromJSON(logger, res, source)
-		if err != nil {
-			return nil, "", err
-		}
-
-		facts, err = KeyFactsFilter(facts)
-		if err != nil {
-			return nil, "", err
-		}
-
-		if len(facts) == 0 {
-			return nil, "", fmt.Errorf("no facts to process")
-		}
-
-		//log.Printf("Successfully processed %d fact(s), for '%s:%s', from source '%s'", len(facts), resource.Project, resource.Environment, source)
-		logger.Info("Successfully processed facts", "number", len(facts))
-
-		return facts, source, nil
+		return ProcessFactsData(v, logger, source)
 	}
 	return nil, "", nil
+}
+
+func ProcessFactsData(v string, logger *slog.Logger, source string) ([]LagoonFact, string, error) {
+	r := strings.NewReader(v)
+	// Decode base64
+	res, err := ioutil.ReadAll(r)
+	if err != nil {
+		slog.Error("Error reading insights data", "Error", err)
+	}
+
+	facts, err := processFactsFromJSON(logger, res, source)
+	if err != nil {
+		return nil, "", err
+	}
+
+	facts, err = KeyFactsFilter(facts)
+	if err != nil {
+		return nil, "", err
+	}
+
+	if len(facts) == 0 {
+		return nil, "", fmt.Errorf("no facts to process")
+	}
+
+	logger.Info("Successfully processed facts", "number", len(facts))
+
+	return facts, source, nil
 }
 
 func processFactsFromJSON(logger *slog.Logger, facts []byte, source string) ([]LagoonFact, error) {
