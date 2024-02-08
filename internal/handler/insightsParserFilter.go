@@ -1,17 +1,10 @@
 package handler
 
 import (
-	"bytes"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"log/slog"
-	"net/http"
-	"strings"
-
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/Khan/genqlient/graphql"
+	"log/slog"
 )
 
 func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonFact, string, error) {
@@ -71,45 +64,6 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 	)
 
 	return facts, source, nil
-}
-
-// getBOMfromPayload is used to extract a *cdx.BOM from an incoming payload
-func getBOMfromPayload(v string) (*cdx.BOM, error) {
-	bom := new(cdx.BOM)
-
-	// Decode base64
-	r := strings.NewReader(v)
-	dec := base64.NewDecoder(base64.StdEncoding, r)
-
-	res, err := ioutil.ReadAll(dec)
-	if err != nil {
-		return nil, err
-	}
-
-	fileType := http.DetectContentType(res)
-
-	if fileType != "application/zip" && fileType != "application/x-gzip" && fileType != "application/gzip" {
-		decoder := cdx.NewBOMDecoder(bytes.NewReader(res), cdx.BOMFileFormatJSON)
-		if err = decoder.Decode(bom); err != nil {
-			return nil, err
-		}
-	} else {
-		// Compressed cyclonedx sbom
-		result, decErr := decodeGzipString(v)
-		if decErr != nil {
-			return nil, decErr
-		}
-		b, mErr := json.MarshalIndent(result, "", " ")
-		if mErr != nil {
-			return nil, mErr
-		}
-
-		decoder := cdx.NewBOMDecoder(bytes.NewReader(b), cdx.BOMFileFormatJSON)
-		if err = decoder.Decode(bom); err != nil {
-			return nil, err
-		}
-	}
-	return bom, nil
 }
 
 func processFactsFromSBOM(logger *slog.Logger, facts *[]cdx.Component, environmentId int, source string) []LagoonFact {
