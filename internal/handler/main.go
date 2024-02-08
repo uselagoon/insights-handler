@@ -281,6 +281,8 @@ func (t *authedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return t.wrapped.RoundTrip(req)
 }
 
+type LagoonSourceFactMap map[string][]LagoonFact
+
 // Incoming payload may contain facts or problems, so we need to handle these differently
 func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource ResourceDestination, insights InsightsData) (err error) {
 	apiClient := h.getApiClient()
@@ -291,18 +293,30 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 
 	if insights.InputPayload == Payload && insights.LagoonType == Facts {
 		for _, p := range incoming.Payload {
-			err := parserFilterLoopForPayloads(insights, p, h, apiClient, resource)
+			lagoonSourceFactMap, err := parserFilterLoopForPayloads(insights, p, h, apiClient, resource)
 			if err != nil {
 				return err
+			}
+			for sourceName, facts := range lagoonSourceFactMap {
+				err = sendResultsetToLagoon(facts, err, h, apiClient, resource, sourceName)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
 
 	if insights.InputPayload == BinaryPayload && insights.LagoonType == Facts {
 		for _, p := range incoming.BinaryPayload {
-			err := parserFilterLoopForBinaryPayloads(insights, p, h, apiClient, resource)
+			lagoonSourceFactMap, err := parserFilterLoopForBinaryPayloads(insights, p, h, apiClient, resource)
 			if err != nil {
 				return err
+			}
+			for sourceName, facts := range lagoonSourceFactMap {
+				err = sendResultsetToLagoon(facts, err, h, apiClient, resource, sourceName)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -310,24 +324,22 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 	return nil
 }
 
-func parserFilterLoopForBinaryPayloads(insights InsightsData, p string, h *Messaging, apiClient graphql.Client, resource ResourceDestination) error {
+func parserFilterLoopForBinaryPayloads(insights InsightsData, p string, h *Messaging, apiClient graphql.Client, resource ResourceDestination) (LagoonSourceFactMap, error) {
+	lagoonSourceFactMap := LagoonSourceFactMap{}
 	for _, filter := range parserFilters {
 
 		result, source, err := filter(h, insights, p, apiClient, resource)
 		if err != nil {
 			slog.Error("Error running filter", "error", err.Error())
-			return err
+			return lagoonSourceFactMap, err
 		}
-
-		err = processResultset(result, err, h, apiClient, resource, source)
-		if err != nil {
-			return err
-		}
+		lagoonSourceFactMap[source] = result
 	}
-	return nil
+	return lagoonSourceFactMap, nil
 }
 
-func parserFilterLoopForPayloads(insights InsightsData, p PayloadInput, h *Messaging, apiClient graphql.Client, resource ResourceDestination) error {
+func parserFilterLoopForPayloads(insights InsightsData, p PayloadInput, h *Messaging, apiClient graphql.Client, resource ResourceDestination) (LagoonSourceFactMap, error) {
+	lagoonSourceFactMap := LagoonSourceFactMap{}
 	for _, filter := range parserFilters {
 		var result []LagoonFact
 		var source string
@@ -335,25 +347,21 @@ func parserFilterLoopForPayloads(insights InsightsData, p PayloadInput, h *Messa
 		json, err := json.Marshal(p)
 		if err != nil {
 			slog.Error("Error marshalling data", "error", err.Error())
-			return err
+			return lagoonSourceFactMap, err
 		}
 
 		result, source, err = filter(h, insights, fmt.Sprintf("%s", json), apiClient, resource)
 		if err != nil {
 			slog.Error("Error Filtering payload", "error", err.Error())
-			return err
+			return lagoonSourceFactMap, err
 		}
-
-		err = processResultset(result, err, h, apiClient, resource, source)
-		if err != nil {
-			return err
-		}
+		lagoonSourceFactMap[source] = result
 	}
-	return nil
+	return lagoonSourceFactMap, nil
 }
 
-// processResultset will send results as facts to the lagoon api after processing via a parser filter
-func processResultset(result []LagoonFact, err error, h *Messaging, apiClient graphql.Client, resource ResourceDestination, source string) error {
+// sendResultsetToLagoon will send results as facts to the lagoon api after processing via a parser filter
+func sendResultsetToLagoon(result []LagoonFact, err error, h *Messaging, apiClient graphql.Client, resource ResourceDestination, source string) error {
 	project, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
 	if apiErr != nil {
 		slog.Error(apiErr.Error())
