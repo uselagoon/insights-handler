@@ -284,25 +284,22 @@ func (t *authedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 type LagoonSourceFactMap map[string][]LagoonFact
 
 // Incoming payload may contain facts or problems, so we need to handle these differently
-func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource ResourceDestination, insights InsightsData) (err error) {
+func (h *Messaging) gatherFactsFromInsightData(incoming *InsightsMessage, resource ResourceDestination, insights InsightsData) ([]LagoonSourceFactMap, error) {
 	apiClient := h.getApiClient()
+	// Here we collect all source fact maps before writing them _once_
+	lagoonSourceFactMapCollection := []LagoonSourceFactMap{}
 
 	if resource.Project == "" && resource.Environment == "" {
-		return fmt.Errorf("no resource definition labels could be found in payload (i.e. lagoon.sh/project or lagoon.sh/environment)")
+		return lagoonSourceFactMapCollection, fmt.Errorf("no resource definition labels could be found in payload (i.e. lagoon.sh/project or lagoon.sh/environment)")
 	}
 
 	if insights.InputPayload == Payload && insights.LagoonType == Facts {
 		for _, p := range incoming.Payload {
 			lagoonSourceFactMap, err := parserFilterLoopForPayloads(insights, p, h, apiClient, resource)
 			if err != nil {
-				return err
+				return lagoonSourceFactMapCollection, err
 			}
-			for sourceName, facts := range lagoonSourceFactMap {
-				err = sendResultsetToLagoon(facts, err, h, apiClient, resource, sourceName)
-				if err != nil {
-					return err
-				}
-			}
+			lagoonSourceFactMapCollection = append(lagoonSourceFactMapCollection, lagoonSourceFactMap)
 		}
 	}
 
@@ -310,18 +307,13 @@ func (h *Messaging) sendToLagoonAPI(incoming *InsightsMessage, resource Resource
 		for _, p := range incoming.BinaryPayload {
 			lagoonSourceFactMap, err := parserFilterLoopForBinaryPayloads(insights, p, h, apiClient, resource)
 			if err != nil {
-				return err
+				return lagoonSourceFactMapCollection, err
 			}
-			for sourceName, facts := range lagoonSourceFactMap {
-				err = sendResultsetToLagoon(facts, err, h, apiClient, resource, sourceName)
-				if err != nil {
-					return err
-				}
-			}
+			lagoonSourceFactMapCollection = append(lagoonSourceFactMapCollection, lagoonSourceFactMap)
 		}
 	}
 
-	return nil
+	return lagoonSourceFactMapCollection, nil
 }
 
 func parserFilterLoopForBinaryPayloads(insights InsightsData, p string, h *Messaging, apiClient graphql.Client, resource ResourceDestination) (LagoonSourceFactMap, error) {
@@ -360,8 +352,39 @@ func parserFilterLoopForPayloads(insights InsightsData, p PayloadInput, h *Messa
 	return lagoonSourceFactMap, nil
 }
 
+func trivySBOMProcessing(apiClient graphql.Client, trivyServerEndpoint string, resource ResourceDestination, payload string) error {
+
+	bom, err := getBOMfromPayload(payload)
+	if err != nil {
+		return err
+	}
+
+	// Determine lagoon resource destination
+	_, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
+	if apiErr != nil {
+		return apiErr
+	}
+
+	// we process the SBOM here
+	// TODO: This should actually live in its own function somewhere else.
+	isAlive, err := IsTrivyServerIsAlive(trivyServerEndpoint)
+	if err != nil {
+		return fmt.Errorf("trivy server not alive: %v", err.Error())
+	} else {
+		slog.Debug("Trivy is reachable")
+	}
+	if isAlive {
+		err = SbomToProblems(apiClient, trivyServerEndpoint, "/tmp/", environment.Id, resource.Service, *bom)
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // sendResultsetToLagoon will send results as facts to the lagoon api after processing via a parser filter
-func sendResultsetToLagoon(result []LagoonFact, err error, h *Messaging, apiClient graphql.Client, resource ResourceDestination, source string) error {
+func (h *Messaging) SendResultsetToLagoon(result []LagoonFact, resource ResourceDestination, source string) error {
+	apiClient := h.getApiClient()
 	project, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
 	if apiErr != nil {
 		slog.Error(apiErr.Error())
@@ -376,10 +399,10 @@ func sendResultsetToLagoon(result []LagoonFact, err error, h *Messaging, apiClie
 		return apiErr
 	}
 
-	err = h.sendFactsToLagoonAPI(result, apiClient, resource, source)
-	if err != nil {
-		slog.Error("Error sending facts to Lagoon API", "error", err.Error())
-		return err
+	e := h.sendFactsToLagoonAPI(result, apiClient, resource, source)
+	if e != nil {
+		slog.Error("Error sending facts to Lagoon API", "error", e.Error())
+		return e
 	}
 
 	return nil

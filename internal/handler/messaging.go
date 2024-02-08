@@ -135,13 +135,26 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 			insights.InsightsType != Direct {
 			slog.Error("only 'sbom', 'direct', 'raw', and 'image' types are currently supported for api processing")
 		} else {
-			err := h.sendToLagoonAPI(incoming, resource, insights)
+			lagoonSourceFactMapCollection, err := h.gatherFactsFromInsightData(incoming, resource, insights)
 
 			if err != nil {
-				slog.Error("Unable to send to the API", "Error", err.Error())
+				slog.Error("Unable to gather facts from incoming data", "Error", err.Error())
 				rejectMessage(false)
 				return
 			}
+
+			// Here we actually go ahead and write all the facts with their source
+			for _, lsfm := range lagoonSourceFactMapCollection {
+				for sourceName, facts := range lsfm {
+					err := h.SendResultsetToLagoon(facts, resource, sourceName)
+					if err != nil {
+						slog.Error("Unable to write facts to api", "Error", err.Error())
+						rejectMessage(false)
+						return
+					}
+				}
+			}
+
 		}
 	}
 	acknowledgeMessage()
