@@ -215,7 +215,7 @@ func preprocessIncomingMessageData(incoming *InsightsMessage) (ResourceDestinati
 		case "image-gz":
 			insights.InsightsType = Image
 		case "direct":
-			insights.InsightsType = Direct
+			return resource, insights, fmt.Errorf("insightsType of 'direct' is deprecated, expect 'direct.facts' - will not process")
 		default:
 			insights.InsightsType = Raw
 		}
