@@ -206,9 +206,13 @@ func preprocessIncomingMessageData(incoming *InsightsMessage) (ResourceDestinati
 	// Define insights type from incoming 'insightsType' label
 	if insights.InputType != "" {
 		switch insights.InputType {
-		case "sbom", "sbom-gz":
+		case "sbom":
+			return resource, insights, fmt.Errorf("insightsType of 'sbom' is deprecated, expect 'image-gz' - will not process")
+		case "sbom-gz":
 			insights.InsightsType = Sbom
-		case "image", "image-gz":
+		case "image":
+			return resource, insights, fmt.Errorf("insightsType of 'image' is deprecated, expect 'image-gz' - will not process")
+		case "image-gz":
 			insights.InsightsType = Image
 		case "direct":
 			insights.InsightsType = Direct
