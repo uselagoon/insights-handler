@@ -293,16 +293,6 @@ func (h *Messaging) gatherFactsFromInsightData(incoming *InsightsMessage, resour
 		return lagoonSourceFactMapCollection, fmt.Errorf("no resource definition labels could be found in payload (i.e. lagoon.sh/project or lagoon.sh/environment)")
 	}
 
-	if insights.InputPayload == Payload && insights.LagoonType == Facts {
-		for _, p := range incoming.Payload {
-			lagoonSourceFactMap, err := parserFilterLoopForPayloads(insights, p, h, apiClient, resource)
-			if err != nil {
-				return lagoonSourceFactMapCollection, err
-			}
-			lagoonSourceFactMapCollection = append(lagoonSourceFactMapCollection, lagoonSourceFactMap)
-		}
-	}
-
 	if insights.InputPayload == BinaryPayload && insights.LagoonType == Facts {
 		for _, p := range incoming.BinaryPayload {
 			lagoonSourceFactMap, err := parserFilterLoopForBinaryPayloads(insights, p, h, apiClient, resource)
@@ -323,28 +313,6 @@ func parserFilterLoopForBinaryPayloads(insights InsightsData, p string, h *Messa
 		result, source, err := filter(h, insights, p, apiClient, resource)
 		if err != nil {
 			slog.Error("Error running filter", "error", err.Error())
-			return lagoonSourceFactMap, err
-		}
-		lagoonSourceFactMap[source] = result
-	}
-	return lagoonSourceFactMap, nil
-}
-
-func parserFilterLoopForPayloads(insights InsightsData, p PayloadInput, h *Messaging, apiClient graphql.Client, resource ResourceDestination) (LagoonSourceFactMap, error) {
-	lagoonSourceFactMap := LagoonSourceFactMap{}
-	for _, filter := range parserFilters {
-		var result []LagoonFact
-		var source string
-
-		json, err := json.Marshal(p)
-		if err != nil {
-			slog.Error("Error marshalling data", "error", err.Error())
-			return lagoonSourceFactMap, err
-		}
-
-		result, source, err = filter(h, insights, fmt.Sprintf("%s", json), apiClient, resource)
-		if err != nil {
-			slog.Error("Error Filtering payload", "error", err.Error())
 			return lagoonSourceFactMap, err
 		}
 		lagoonSourceFactMap[source] = result
