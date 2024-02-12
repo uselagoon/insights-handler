@@ -76,6 +76,7 @@ func processFactsFromImageInspect(logger *slog.Logger, imageInspectData ImageDat
 	// Check if image inspect contains useful environment variables
 	if imageInspectData.Env != nil {
 		for _, v := range imageInspectData.Env {
+			logger.Debug("Processing env data", "data", v)
 			var envSplitStr = strings.Split(v, "=")
 			env := EnvironmentVariable{
 				Key:   envSplitStr[0],
@@ -102,14 +103,10 @@ func processFactsFromImageInspect(logger *slog.Logger, imageInspectData ImageDat
 			Type:        FactTypeText,
 		}
 
-		logger.Debug("Processing fact", "name", f.Key, "value", f.Value)
+		logger.Debug("Processing environment fact", "name", f.Key, "value", f.Value)
 
 		fact, _ = ProcessLagoonFactAgainstRegisteredFilters(fact, f)
 		factsInput = append(factsInput, fact)
 	}
 	return factsInput, nil
-}
-
-func init() {
-	RegisterParserFilter(processImageInspectInsightsData)
 }

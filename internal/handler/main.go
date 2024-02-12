@@ -293,31 +293,42 @@ func (h *Messaging) gatherFactsFromInsightData(incoming *InsightsMessage, resour
 		return lagoonSourceFactMapCollection, fmt.Errorf("no resource definition labels could be found in payload (i.e. lagoon.sh/project or lagoon.sh/environment)")
 	}
 
-	if insights.InputPayload == BinaryPayload && insights.LagoonType == Facts {
+	slog.Debug("Processing data", "InputPayload", insights.InputPayload, "LagoonType", insights.LagoonType, "InsightsType", insights.InsightsType)
+
+	if insights.InputPayload == BinaryPayload {
+		var binaryPayload string
+		// We simply pop off the first item - this drastically simplifies the logic below
 		for _, p := range incoming.BinaryPayload {
-			lagoonSourceFactMap, err := parserFilterLoopForBinaryPayloads(insights, p, h, apiClient, resource)
+			binaryPayload = p
+			break
+		}
+		lagoonSourceFactMap := LagoonSourceFactMap{}
+		// since we only have two parser filter types now - let's explicitly call them
+
+		// First we call the image inspect processor, in case there's anything there
+		if insights.InsightsType == Image {
+			slog.Debug("Running InsightsType == Image. Got insights image input")
+			result, source, err := processImageInspectInsightsData(h, insights, binaryPayload, apiClient, resource)
 			if err != nil {
-				return lagoonSourceFactMapCollection, err
+				slog.Error("Error running filter", "error", err.Error())
 			}
+			lagoonSourceFactMap[source] = result
 			lagoonSourceFactMapCollection = append(lagoonSourceFactMapCollection, lagoonSourceFactMap)
 		}
+
+		// Then we call the SBOM processor, in case we're dealing with this type
+		if insights.InsightsType == Sbom {
+			result, source, err := processSbomInsightsData(h, insights, binaryPayload, apiClient, resource)
+			if err != nil {
+				slog.Error("Error running filter", "error", err.Error())
+			}
+			lagoonSourceFactMap[source] = result
+
+		}
+		lagoonSourceFactMapCollection = append(lagoonSourceFactMapCollection, lagoonSourceFactMap)
 	}
 
 	return lagoonSourceFactMapCollection, nil
-}
-
-func parserFilterLoopForBinaryPayloads(insights InsightsData, p string, h *Messaging, apiClient graphql.Client, resource ResourceDestination) (LagoonSourceFactMap, error) {
-	lagoonSourceFactMap := LagoonSourceFactMap{}
-	for _, filter := range parserFilters {
-
-		result, source, err := filter(h, insights, p, apiClient, resource)
-		if err != nil {
-			slog.Error("Error running filter", "error", err.Error())
-			return lagoonSourceFactMap, err
-		}
-		lagoonSourceFactMap[source] = result
-	}
-	return lagoonSourceFactMap, nil
 }
 
 func trivySBOMProcessing(apiClient graphql.Client, trivyServerEndpoint string, resource ResourceDestination, payload string) error {
@@ -334,7 +345,6 @@ func trivySBOMProcessing(apiClient graphql.Client, trivyServerEndpoint string, r
 	}
 
 	// we process the SBOM here
-	// TODO: This should actually live in its own function somewhere else.
 	isAlive, err := IsTrivyServerIsAlive(trivyServerEndpoint)
 	if err != nil {
 		return fmt.Errorf("trivy server not alive: %v", err.Error())
@@ -463,6 +473,7 @@ func (h *Messaging) sendToLagoonS3(incoming *InsightsMessage, insights InsightsD
 		slog.Info(fmt.Sprintf("Successfully created %s", h.S3Config.Bucket))
 	}
 
+	// TODO: this can likely be removed
 	if len(incoming.Payload) != 0 {
 		b, err := json.Marshal(incoming)
 		if err != nil {

@@ -117,7 +117,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 	slog.Debug("Insights", "data", fmt.Sprint(insights))
 	slog.Debug("Target", "data", fmt.Sprint(resource))
 
-	// Process s3 upload
+	// Process s3 upload - that is, upload the incoming insights data to an s3 bucket
 	if !h.S3Config.Disabled {
 		if insights.InsightsType != Direct {
 			err := h.sendToLagoonS3(incoming, insights, resource)

@@ -105,7 +105,3 @@ func processFactsFromSBOM(logger *slog.Logger, facts *[]cdx.Component, environme
 	}
 	return factsInput
 }
-
-func init() {
-	RegisterParserFilter(processSbomInsightsData)
-}
