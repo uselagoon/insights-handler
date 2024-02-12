@@ -122,7 +122,7 @@ func main() {
 		}
 	}
 
-	// configure the backup handler settings
+	// We begin by setting up the handler's broker connection
 	broker := handler.RabbitBroker{
 		Hostname:     fmt.Sprintf("%s:%s", mqHost, mqPort),
 		Username:     mqUser,
@@ -130,6 +130,8 @@ func main() {
 		QueueName:    insightsQueueName,
 		ExchangeName: insightsExchange,
 	}
+
+	// graphQLConfig details how we connect to the Lagoon API
 	graphQLConfig := handler.LagoonAPI{
 		Endpoint:        lagoonAPIHost,
 		TokenSigningKey: jwtTokenSigningKey,
@@ -138,6 +140,8 @@ func main() {
 		JWTIssuer:       jwtIssuer,
 		Disabled:        disableAPIIntegration,
 	}
+
+	// s3Config details how we connect to the s3 buckets - these are used to upload files
 	s3Config := handler.S3{
 		SecretAccessKey: s3SecretAccessKey,
 		S3Origin:        s3Origin,
@@ -150,10 +154,11 @@ func main() {
 
 	slog.Debug("disableS3Upload", "status", disableS3Upload)
 
+	// Here we look at the filter json/yaml and attempt to load up the filter descriptions
 	err := handler.RegisterFiltersFromDisk(filterTransformerFile)
 	if err != nil {
-		// TODO: BETTER ERROR HANDLING
 		slog.Error("Unable to register filters from disk", "Error", err)
+		os.Exit(1)
 	}
 
 	config := mq.Config{
@@ -209,7 +214,7 @@ func main() {
 	)
 
 	// start the consumer
-	//slog.Info("insights-handler is started-up")
+	slog.Info("insights-handler has started-up")
 	messaging.Consumer()
 }
 

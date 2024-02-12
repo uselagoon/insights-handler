@@ -33,10 +33,13 @@ type FactTransforms struct {
 	Transforms []FactTransform `json:"transforms"`
 }
 
+// registerFilter takes in a parserFilter defining function (capturing a transform programmatically) and adds it to
+// the global list of parserFilters
 func registerFilter(filter func(filter parserFilter) parserFilter) {
 	KeyFactFilters = append(KeyFactFilters, filter)
 }
 
+// ProcessLagoonFactAgainstRegisteredFilters will take in a single fact and run it against all KeyFactFilters
 func ProcessLagoonFactAgainstRegisteredFilters(fact LagoonFact, insightsRawData interface{}) (LagoonFact, error) {
 	for _, filter := range KeyFactFilters {
 		pf := FactProcessor{
@@ -82,8 +85,12 @@ func LoadTransformsFromDisk(filename string) ([]FactTransform, error) {
 	return ret.Transforms, nil
 }
 
+// GenerateFilterFromTransform will take a transform description and generate a function that will check a fact
+// against a transform - that is, see if we need to change its name/value.
+// Perhaps the only tricky thing here is that
 func GenerateFilterFromTransform(transform FactTransform) (func(filter parserFilter) parserFilter, error) {
 
+	// we build and return a function that captures the given transform (description of changes) in a closure
 	return func(filter parserFilter) parserFilter {
 
 		if transform.Type != "" {
