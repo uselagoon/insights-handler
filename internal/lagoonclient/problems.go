@@ -59,6 +59,7 @@ func AddProblems(ctx context.Context, client graphql.Client, problems []LagoonPr
 }
 
 func DeleteProblemsFromSource(ctx context.Context, client graphql.Client, environmentID int, service string, source string) (string, error) {
+
 	resp, err := deleteProblemsFromSource(ctx, client, environmentID, source, service)
 	if err != nil {
 		return "", err
