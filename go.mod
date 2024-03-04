@@ -7,7 +7,7 @@ require (
 	github.com/cheshir/go-mq v1.0.2
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/joho/godotenv v1.5.1
-	github.com/matryer/try v0.0.0-20161228173917-9ac251b645a2
+	github.com/matryer/try v1
 	github.com/stretchr/testify v1.9.0
 )
 
