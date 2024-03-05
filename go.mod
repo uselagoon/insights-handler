@@ -3,7 +3,7 @@ module github.com/uselagoon/lagoon/services/insights-handler
 go 1.21
 
 require (
-	github.com/Khan/genqlient v0.6.0
+	github.com/Khan/genqlient v0.7.0
 	github.com/cheshir/go-mq v1.0.2
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/joho/godotenv v1.5.1
@@ -19,7 +19,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/google/uuid v1.3.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.16.5 // indirect
 	github.com/klauspost/cpuid v1.3.1 // indirect
@@ -40,11 +40,10 @@ require (
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/streadway/amqp v0.0.0-20200108173154-1c71cc93ed71 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
-	github.com/vektah/gqlparser/v2 v2.5.10 // indirect
-	golang.org/x/crypto v0.16.0 // indirect
-	golang.org/x/sys v0.15.0 // indirect
+	github.com/vektah/gqlparser/v2 v2.5.11 // indirect
+	golang.org/x/crypto v0.19.0 // indirect
+	golang.org/x/sys v0.17.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	golang.org/x/tools v0.10.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
@@ -60,7 +59,7 @@ require (
 	github.com/fsouza/go-dockerclient v1.7.3 // indirect
 	github.com/minio/minio-go/v7 v7.0.21
 	github.com/tiago4orion/conjure v0.0.0-20150908101743-93cb30b9d218 // indirect
-	golang.org/x/net v0.19.0 // indirect
+	golang.org/x/net v0.21.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1
 )
 
