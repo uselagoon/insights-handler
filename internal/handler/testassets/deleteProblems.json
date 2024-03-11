@@ -1,0 +1,6 @@
+{
+  "environment": 3,
+  "type": "direct.delete.problems",
+  "source": "insights:facts:cli",
+  "service": ""
+}
