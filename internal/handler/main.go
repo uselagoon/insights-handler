@@ -386,6 +386,11 @@ func (h *Messaging) SendResultsetToLagoon(result []LagoonFact, resource Resource
 	return nil
 }
 
+func (h *Messaging) sendFactsToDB(facts []LagoonFact, resource ResourceDestination, source string) error {
+
+	return nil
+}
+
 func (h *Messaging) sendFactsToLagoonAPI(facts []LagoonFact, apiClient graphql.Client, resource ResourceDestination, source string) error {
 
 	slog.Debug("Matched facts",

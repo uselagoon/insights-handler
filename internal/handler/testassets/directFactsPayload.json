@@ -12,7 +12,8 @@
       "type": "TEXT",
       "category": "Framework",
       "service": "cli",
-      "keyFact": true
+      "keyFact": true,
+      "source": "somethingwicked"
     },
     {
       "projectName": "lagoon-demo-org",
@@ -23,7 +24,8 @@
       "type": "TEXT",
       "category": "Programming language",
       "service": "cli",
-      "keyFact": false
+      "keyFact": false,
+      "source": "somethingwicked"
     }
   ],
   "type": "direct.facts",

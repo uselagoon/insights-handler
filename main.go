@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/cheshir/go-mq"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/handler"
+	"github.com/uselagoon/lagoon/services/insights-handler/internal/service"
 	"log/slog"
 	"os"
 	"strconv"
@@ -41,6 +42,10 @@ var (
 	enableDebug                  bool
 	problemsFromSBOM             bool
 	trivyServerEndpoint          string
+	disableConsumer              bool
+	disableWebservice            bool
+	webservicePort               int
+	webserviceListenAddress      string
 )
 
 func main() {
@@ -72,6 +77,10 @@ func main() {
 	flag.BoolVar(&enableDebug, "debug", false, "Enable debugging output")
 	flag.BoolVar(&problemsFromSBOM, "problems-from-sbom", false, "Pass any SBOM through Trivy")
 	flag.StringVar(&trivyServerEndpoint, "trivy-server-location", "http://localhost:4954", "Trivy server endpoint")
+	flag.BoolVar(&disableConsumer, "disable-broker-consumer", false, "Set this to 'true' if you'd need to run insights-handler without broker integration")
+	flag.BoolVar(&disableWebservice, "disable-webservice", false, "Set to true if you need the web-service to be disabled")
+	flag.IntVar(&webservicePort, "webservice-port", 3005, "Port webservice is started on")
+	flag.StringVar(&webserviceListenAddress, "webservice-listen-add", "0.0.0.0", "Address on which to listen to incoming webservice connections")
 
 	flag.Parse()
 
@@ -101,6 +110,11 @@ func main() {
 	problemsFromSBOM = getEnvBool("PROBLEMS_FROM_SBOM", problemsFromSBOM)
 	trivyServerEndpoint = getEnv("TRIVY_SERVER_ENDPOINT", trivyServerEndpoint)
 	enableDebug = getEnvBool("ENABLE_DEBUG", enableDebug)
+	disableConsumer = getEnvBool("DISABLE_CONSUMER", disableConsumer)
+	disableWebservice = getEnvBool("DISABLE_WEBSERVICE", disableWebservice)
+	webservicePort = getEnvInt("WEBSERVICE_PORT", webservicePort)
+	webserviceListenAddress = getEnv("WEBSERVICE_LISTEN_ADDRESS", webserviceListenAddress)
+
 	// First we set up the default logger for the project
 
 	// If we enable debugging, we set the logging level to output debug for the default logger.
@@ -203,19 +217,41 @@ func main() {
 		DSN: fmt.Sprintf("amqp://%s:%s@%s/", broker.Username, broker.Password, broker.Hostname),
 	}
 
-	messaging := handler.NewMessaging(config,
-		graphQLConfig,
-		s3Config,
-		startupConnectionAttempts,
-		startupConnectionInterval,
-		enableDebug,
-		problemsFromSBOM,
-		trivyServerEndpoint,
-	)
+	db, err := service.SetUpDatabase(service.Dboptions{Filename: "database.sql"})
+	if err != nil {
+		slog.Error(err.Error())
+		os.Exit(1)
+	}
 
-	// start the consumer
-	slog.Info("insights-handler has started-up")
-	messaging.Consumer()
+	// Start up the web service if we need it
+	if !disableWebservice {
+
+		r, err := service.SetupRouter(db)
+		if err != nil {
+			slog.Error(err.Error())
+			os.Exit(1)
+		}
+
+		go r.Run(fmt.Sprintf("%v:%v", webserviceListenAddress, webservicePort))
+	}
+
+	// Start up the consumer if we need it
+	if !disableConsumer {
+		messaging := handler.NewMessaging(config,
+			graphQLConfig,
+			s3Config,
+			startupConnectionAttempts,
+			startupConnectionInterval,
+			enableDebug,
+			problemsFromSBOM,
+			trivyServerEndpoint,
+			db,
+		)
+
+		// start the consumer
+		//slog.Info("insights-handler is started-up")
+		messaging.Consumer()
+	}
 }
 
 func getEnv(key, fallback string) string {
@@ -231,6 +267,14 @@ func getEnvBool(key string, fallback bool) bool {
 	if value, ok := os.LookupEnv(key); ok {
 		rVal, _ := strconv.ParseBool(value)
 		return rVal
+	}
+	return fallback
+}
+
+func getEnvInt(key string, fallback int) int {
+	if value, ok := os.LookupEnv(key); ok {
+		rVal, _ := strconv.ParseInt(value, 10, 16)
+		return int(rVal)
 	}
 	return fallback
 }
