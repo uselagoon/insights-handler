@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/cheshir/go-mq"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/handler"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/service"
 	"log/slog"
@@ -251,10 +252,6 @@ func main() {
 		//slog.Info("insights-handler is started-up")
 		messaging.Consumer()
 	}
-
-	// start the consumer
-	slog.Info("insights-handler has started-up")
-	messaging.Consumer()
 }
 
 func getEnv(key, fallback string) string {
