@@ -61,6 +61,20 @@ func TestNewEOLData(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:    "Test Assertion Failure",
+			wantErr: true,
+			args: args{
+				EolArgs: NewEOLDataArgs{
+					Packages: []string{
+						"alpine",
+					},
+					CacheLocation:       "testnocache.json",
+					ForceCacheRefresh:   true,
+					PreventCacheRefresh: true,
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -80,6 +94,9 @@ func TestNewEOLData(t *testing.T) {
 			got, err := NewEOLData(tt.args.EolArgs)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewEOLData() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err != nil { // We've got an error, and probably don't need to report it, 'cause it was expected
 				return
 			}
 			if len(got.Packages[tt.args.EolArgs.Packages[0]]) == 0 {
@@ -111,6 +128,20 @@ func TestNewEOLDataWithExistingCache(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:    "Test Nonexistent cache failure",
+			wantErr: true,
+			args: args{
+				EolArgs: NewEOLDataArgs{
+					Packages: []string{
+						"alpine",
+					},
+					CacheLocation:       "doesntexist.json",
+					ForceCacheRefresh:   false,
+					PreventCacheRefresh: true,
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -118,6 +149,9 @@ func TestNewEOLDataWithExistingCache(t *testing.T) {
 			got, err := NewEOLData(tt.args.EolArgs)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewEOLData() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err != nil {
 				return
 			}
 			if len(got.Packages[tt.args.EolArgs.Packages[0]]) == 0 {

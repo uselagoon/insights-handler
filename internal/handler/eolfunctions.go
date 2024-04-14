@@ -38,8 +38,8 @@ type NewEOLDataArgs struct {
 func NewEOLData(args NewEOLDataArgs) (*EOLData, error) {
 
 	// basic assertions of logic
-	if args.ForceCacheRefresh && !args.PreventCacheRefresh {
-		return nil, fmt.Errorf("You cannot Force Cache Refresh AND Prevent Cache Refresh")
+	if args.ForceCacheRefresh && args.PreventCacheRefresh {
+		return nil, fmt.Errorf("you cannot Force Cache Refresh AND Prevent Cache Refresh")
 	}
 
 	packages := args.Packages
@@ -55,6 +55,9 @@ func NewEOLData(args NewEOLDataArgs) (*EOLData, error) {
 			return nil, err
 		}
 	} else if os.IsNotExist(err) {
+		if args.PreventCacheRefresh {
+			return nil, fmt.Errorf("cache not found and Prevent Cache Refresh enabled")
+		}
 		// Cache file does not exist, fetch data and write to file
 		endOfLifeInfo := GetEndOfLifeInfo(packages)
 		data.Packages = endOfLifeInfo
@@ -91,7 +94,7 @@ func GetEndOfLifeInfo(packageNames []string) map[string][]PackageInfo {
 
 		var data []PackageInfo
 		if err := json.Unmarshal(body, &data); err != nil {
-			fmt.Printf("Error parsing JSON for %s: %v\n", packageName, err)
+			fmt.Printf("error parsing JSON for %s: %v\n", packageName, err)
 			continue
 		}
 
