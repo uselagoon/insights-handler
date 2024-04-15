@@ -282,15 +282,17 @@ func (t *authedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 type LagoonSourceFactMap map[string][]LagoonFact
+type LagoonSourceProblemMap map[string][]lagoonclient.LagoonProblem
 
 // Incoming payload may contain facts or problems, so we need to handle these differently
-func (h *Messaging) gatherFactsFromInsightData(incoming *InsightsMessage, resource ResourceDestination, insights InsightsData) ([]LagoonSourceFactMap, error) {
+func (h *Messaging) gatherFactsFromInsightData(incoming *InsightsMessage, resource ResourceDestination, insights InsightsData) ([]LagoonSourceFactMap, []LagoonSourceProblemMap, error) {
 	apiClient := h.getApiClient()
 	// Here we collect all source fact maps before writing them _once_
 	lagoonSourceFactMapCollection := []LagoonSourceFactMap{}
+	lagoonSourceProblemMapCollection := []LagoonSourceProblemMap{}
 
 	if resource.Project == "" && resource.Environment == "" {
-		return lagoonSourceFactMapCollection, fmt.Errorf("no resource definition labels could be found in payload (i.e. lagoon.sh/project or lagoon.sh/environment)")
+		return lagoonSourceFactMapCollection, lagoonSourceProblemMapCollection, fmt.Errorf("no resource definition labels could be found in payload (i.e. lagoon.sh/project or lagoon.sh/environment)")
 	}
 
 	slog.Debug("Processing data", "InputPayload", insights.InputPayload, "LagoonType", insights.LagoonType, "InsightsType", insights.InsightsType)
@@ -328,7 +330,7 @@ func (h *Messaging) gatherFactsFromInsightData(incoming *InsightsMessage, resour
 		lagoonSourceFactMapCollection = append(lagoonSourceFactMapCollection, lagoonSourceFactMap)
 	}
 
-	return lagoonSourceFactMapCollection, nil
+	return lagoonSourceFactMapCollection, lagoonSourceProblemMapCollection, nil
 }
 
 func trivySBOMProcessing(apiClient graphql.Client, trivyServerEndpoint string, resource ResourceDestination, payload string) error {
