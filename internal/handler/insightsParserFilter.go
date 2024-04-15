@@ -4,27 +4,47 @@ import (
 	"fmt"
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/Khan/genqlient/graphql"
+	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient"
 	"log/slog"
 )
 
-func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonFact, string, error) {
+func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonFact, []lagoonclient.LagoonProblem, string, error) {
 
 	source := fmt.Sprintf("insights:sbom:%s", resource.Service)
 	logger := slog.With("ProjectName", resource.Project, "EnvironmentName", resource.Environment, "Source", source)
 
+	// ret values
+	problemSlice := []lagoonclient.LagoonProblem{
+		{
+			Id:                0,
+			Environment:       0,
+			Identifier:        "test",
+			Version:           "",
+			FixedVersion:      "",
+			Source:            "",
+			Service:           "",
+			Data:              "",
+			Severity:          "",
+			SeverityScore:     0,
+			AssociatedPackage: "",
+			Description:       "",
+			Links:             "",
+		},
+	}
+
 	if insights.InsightsType != Sbom {
-		return []LagoonFact{}, "", nil
+		return []LagoonFact{}, problemSlice, "", nil
 	}
 
 	bom, err := getBOMfromPayload(v)
 	if err != nil {
-		return []LagoonFact{}, "", err
+		return []LagoonFact{}, problemSlice, "", err
 	}
 
 	// Determine lagoon resource destination
 	_, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
 	if apiErr != nil {
-		return nil, "", apiErr
+		return nil, problemSlice, "", apiErr
 	}
 
 	// we process the SBOM here
@@ -32,7 +52,7 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 	if h.ProblemsFromSBOM == true {
 		isAlive, err := IsTrivyServerIsAlive(h.TrivyServerEndpoint)
 		if err != nil {
-			return nil, "", fmt.Errorf("trivy server not alive: %v", err.Error())
+			return nil, problemSlice, "", fmt.Errorf("trivy server not alive: %v", err.Error())
 		} else {
 			logger.Debug("Trivy is reachable")
 		}
@@ -40,7 +60,7 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 			err = SbomToProblems(apiClient, h.TrivyServerEndpoint, "/tmp/", environment.Id, resource.Service, *bom)
 		}
 		if err != nil {
-			return nil, "", err
+			return nil, problemSlice, "", err
 		}
 	}
 
@@ -49,11 +69,11 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 
 	facts, err = KeyFactsFilter(facts)
 	if err != nil {
-		return nil, "", err
+		return nil, problemSlice, "", err
 	}
 
 	if len(facts) == 0 {
-		return nil, "", fmt.Errorf("no facts to process")
+		return nil, problemSlice, "", fmt.Errorf("no facts to process")
 	}
 
 	//log.Printf("Successfully decoded SBOM of image %s with %s, found %d for '%s:%s'", bom.Metadata.Component.Name, (*bom.Metadata.Tools)[0].Name, len(*bom.Components), resource.Project, resource.Environment)
@@ -63,7 +83,7 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 		"Length", len(*bom.Components),
 	)
 
-	return facts, source, nil
+	return facts, problemSlice, source, nil
 }
 
 func processFactsFromSBOM(logger *slog.Logger, facts *[]cdx.Component, environmentId int, source string) []LagoonFact {

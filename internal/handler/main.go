@@ -305,6 +305,7 @@ func (h *Messaging) gatherFactsFromInsightData(incoming *InsightsMessage, resour
 			break
 		}
 		lagoonSourceFactMap := LagoonSourceFactMap{}
+		lagoonSourceProblemMap := LagoonSourceProblemMap{}
 		// since we only have two parser filter types now - let's explicitly call them
 
 		// First we call the image inspect processor, in case there's anything there
@@ -320,14 +321,16 @@ func (h *Messaging) gatherFactsFromInsightData(incoming *InsightsMessage, resour
 
 		// Then we call the SBOM processor, in case we're dealing with this type
 		if insights.InsightsType == Sbom {
-			result, source, err := processSbomInsightsData(h, insights, binaryPayload, apiClient, resource)
+			facts, problems, source, err := processSbomInsightsData(h, insights, binaryPayload, apiClient, resource)
 			if err != nil {
 				slog.Error("Error running filter", "error", err.Error())
 			}
-			lagoonSourceFactMap[source] = result
+			lagoonSourceFactMap[source] = facts
+			lagoonSourceProblemMap[source] = problems
 
 		}
 		lagoonSourceFactMapCollection = append(lagoonSourceFactMapCollection, lagoonSourceFactMap)
+		lagoonSourceProblemMapCollection = append(lagoonSourceProblemMapCollection, lagoonSourceProblemMap)
 	}
 
 	return lagoonSourceFactMapCollection, lagoonSourceProblemMapCollection, nil
