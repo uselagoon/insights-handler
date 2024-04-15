@@ -3,9 +3,11 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"time"
 )
 
 // eolfunctions.go contains all the basic functionality for checking key facts' end of life status against https://endoflife.date/docs/api
@@ -23,8 +25,9 @@ type PackageInfo struct {
 }
 
 type EOLData struct {
-	Packages      map[string][]PackageInfo
-	CacheLocation string
+	Packages       map[string][]PackageInfo
+	CacheLocation  string
+	ComparisonDate *time.Time
 }
 
 type NewEOLDataArgs struct {
@@ -71,7 +74,58 @@ func NewEOLData(args NewEOLDataArgs) (*EOLData, error) {
 		return nil, err
 	}
 
+	timeNow := time.Now()
+	data.ComparisonDate = &timeNow
+
 	return data, nil
+}
+
+// GenerateProblemsForPackages takes in a map of package names to version (strings) and returns a set of outdated
+func (t *EOLData) GenerateProblemsForPackages(packages map[string]string, environmentId int, service string) ([]lagoonclient.LagoonProblem, error) {
+	var problems []lagoonclient.LagoonProblem
+	now := time.Now()
+	for packageName, version := range packages {
+		packageData, err := t.EolDataForPackage(packageName, version)
+		if err == nil {
+			date, err := time.Parse("2006-01-02", packageData.EOL)
+			if err != nil {
+				return problems, fmt.Errorf("Unable to parse date '%v' for package information", packageData.EOL)
+			}
+			if t.ComparisonDate != nil {
+				date = *t.ComparisonDate
+			}
+			if date.Before(now) {
+				problems = append(problems, lagoonclient.LagoonProblem{
+					Environment:       environmentId,
+					Identifier:        fmt.Sprintf("EOL-%v-%v", packageName, version),
+					Version:           version,
+					FixedVersion:      "",
+					Source:            "insights-handler-EOLData",
+					Service:           service,
+					Data:              "{}",
+					Severity:          "",
+					SeverityScore:     0,
+					AssociatedPackage: "",
+					Description:       fmt.Sprintf("Package '%v' is at End-of-life as of '%v'", packageName, packageData.EOL),
+					Links:             "",
+				})
+			}
+		}
+	}
+	return problems, nil
+}
+
+func (t *EOLData) EolDataForPackage(packageName, ver string) (PackageInfo, error) {
+	if packages := t.Packages[packageName]; packages != nil {
+		for _, p := range packages {
+			if p.Cycle == ver {
+				return p, nil
+			}
+		}
+	} else {
+		return PackageInfo{}, fmt.Errorf("Package '%v' not found in EOL list", packageName)
+	}
+	return PackageInfo{}, fmt.Errorf("Package '%v' version '%v' not found in EOL list", packageName, ver)
 }
 
 func GetEndOfLifeInfo(packageNames []string) map[string][]PackageInfo {
