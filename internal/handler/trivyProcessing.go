@@ -29,10 +29,6 @@ func SbomToProblems(apiClient graphql.Client, trivyRemoteAddress string, bomWrit
 		problemsArray[i].Source = problemSource
 	}
 
-	err = writeProblemsArrayToApi(apiClient, environmentId, problemSource, service, problemsArray)
-	if err != nil {
-		return problemsArray, fmt.Errorf("unable to execute trivy processing- writing problems to api: %v", err.Error())
-	}
 	return problemsArray, nil
 }
 

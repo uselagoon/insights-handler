@@ -32,7 +32,6 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 	}
 
 	// we process the SBOM here
-	// TODO: This should actually live in its own function somewhere else.
 	if h.ProblemsFromSBOM == true {
 		isAlive, err := IsTrivyServerIsAlive(h.TrivyServerEndpoint)
 		if err != nil {

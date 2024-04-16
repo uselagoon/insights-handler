@@ -400,7 +400,19 @@ func (h *Messaging) deleteExistingFactsBySource(apiClient graphql.Client, enviro
 }
 
 func (h *Messaging) SendProblemSliceToLagoon(result []lagoonclient.LagoonProblem, resource ResourceDestination, source string) error {
-	slog.Info(fmt.Sprintf("Found the following problems for Project '%v', environment '%v', source '%v"), resource.Project, resource.Environment, source)
+
+	apiClient := h.getApiClient()
+	_, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
+
+	if apiErr != nil {
+		return apiErr
+	}
+
+	slog.Info(fmt.Sprintf("Found the following problems for Project '%v', environment '%v', source '%v", resource.Project, resource.Environment, source))
+	err := writeProblemsArrayToApi(apiClient, environment.Id, problemSource, resource.Service, result)
+	if err != nil {
+		return fmt.Errorf("unable to write problems to api: %v", err.Error())
+	}
 	return nil
 }
 
