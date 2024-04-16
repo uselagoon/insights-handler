@@ -409,6 +409,9 @@ func (h *Messaging) SendProblemSliceToLagoon(result []lagoonclient.LagoonProblem
 	}
 
 	slog.Info(fmt.Sprintf("Found the following problems for Project '%v', environment '%v', source '%v", resource.Project, resource.Environment, source))
+	for _, prob := range result {
+		slog.Info(fmt.Sprintf("%v:%v", prob.Identifier, prob.Version))
+	}
 	err := writeProblemsArrayToApi(apiClient, environment.Id, problemSource, resource.Service, result)
 	if err != nil {
 		return fmt.Errorf("unable to write problems to api: %v", err.Error())
