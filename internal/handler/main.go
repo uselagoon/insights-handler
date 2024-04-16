@@ -336,35 +336,6 @@ func (h *Messaging) gatherFactsFromInsightData(incoming *InsightsMessage, resour
 	return lagoonSourceFactMapCollection, lagoonSourceProblemMapCollection, nil
 }
 
-func trivySBOMProcessing(apiClient graphql.Client, trivyServerEndpoint string, resource ResourceDestination, payload string) error {
-
-	bom, err := getBOMfromPayload(payload)
-	if err != nil {
-		return err
-	}
-
-	// Determine lagoon resource destination
-	_, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
-	if apiErr != nil {
-		return apiErr
-	}
-
-	// we process the SBOM here
-	isAlive, err := IsTrivyServerIsAlive(trivyServerEndpoint)
-	if err != nil {
-		return fmt.Errorf("trivy server not alive: %v", err.Error())
-	} else {
-		slog.Debug("Trivy is reachable")
-	}
-	if isAlive {
-		err = SbomToProblems(apiClient, trivyServerEndpoint, "/tmp/", environment.Id, resource.Service, *bom)
-	}
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // sendResultsetToLagoon will send results as facts to the lagoon api after processing via a parser filter
 func (h *Messaging) SendResultsetToLagoon(result []LagoonFact, resource ResourceDestination, source string) error {
 	apiClient := h.getApiClient()
