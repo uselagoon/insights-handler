@@ -50,6 +50,23 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 	// Process SBOM into facts
 	facts := processFactsFromSBOM(logger, bom.Components, environment.Id, source)
 
+	// Here, before we filter things, we run our facts through EOL data
+	problemSlice = append(problemSlice, lagoonclient.LagoonProblem{
+		Id:                0,
+		Environment:       environment.Id,
+		Identifier:        "Testing EOL",
+		Version:           "",
+		FixedVersion:      "",
+		Source:            "",
+		Service:           "",
+		Data:              "",
+		Severity:          "",
+		SeverityScore:     0,
+		AssociatedPackage: "",
+		Description:       "",
+		Links:             "",
+	})
+
 	facts, err = KeyFactsFilter(facts)
 	if err != nil {
 		return nil, problemSlice, "", err
