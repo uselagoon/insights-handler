@@ -156,7 +156,12 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 			}
 			for _, lspm := range lagoonSourceProblemMapCollection {
 				for sourceName, problems := range lspm {
-					fmt.Println("GOT PROBLEM COUNT FOR SOURCE '%v': %v", sourceName, len(problems))
+					err := h.SendProblemSliceToLagoon(problems, resource, sourceName)
+					if err != nil {
+						slog.Error("Unable to write problems to api", "Error", err.Error())
+						rejectMessage(false)
+						return
+					}
 				}
 			}
 		}

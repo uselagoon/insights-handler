@@ -428,6 +428,11 @@ func (h *Messaging) deleteExistingFactsBySource(apiClient graphql.Client, enviro
 	return nil
 }
 
+func (h *Messaging) SendProblemSliceToLagoon(result []lagoonclient.LagoonProblem, resource ResourceDestination, source string) error {
+	slog.Info(fmt.Sprintf("Found the following problems for Project '%v', environment '%v', source '%v"), resource.Project, resource.Environment, source)
+	return nil
+}
+
 func (h *Messaging) getApiClient() graphql.Client {
 	apiClient := graphql.NewClient(h.LagoonAPI.Endpoint, &http.Client{Transport: &authedTransport{wrapped: http.DefaultTransport, h: h}})
 	return apiClient

@@ -14,23 +14,7 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 	logger := slog.With("ProjectName", resource.Project, "EnvironmentName", resource.Environment, "Source", source)
 
 	// ret values
-	problemSlice := []lagoonclient.LagoonProblem{
-		{
-			Id:                0,
-			Environment:       0,
-			Identifier:        "test",
-			Version:           "",
-			FixedVersion:      "",
-			Source:            "",
-			Service:           "",
-			Data:              "",
-			Severity:          "",
-			SeverityScore:     0,
-			AssociatedPackage: "",
-			Description:       "",
-			Links:             "",
-		},
-	}
+	var problemSlice []lagoonclient.LagoonProblem
 
 	if insights.InsightsType != Sbom {
 		return []LagoonFact{}, problemSlice, "", nil
@@ -57,7 +41,7 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 			logger.Debug("Trivy is reachable")
 		}
 		if isAlive {
-			err = SbomToProblems(apiClient, h.TrivyServerEndpoint, "/tmp/", environment.Id, resource.Service, *bom)
+			problemSlice, err = SbomToProblems(apiClient, h.TrivyServerEndpoint, "/tmp/", environment.Id, resource.Service, *bom)
 		}
 		if err != nil {
 			return nil, problemSlice, "", err
