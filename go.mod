@@ -28,6 +28,7 @@ require (
 	github.com/minio/md5-simd v1.1.0 // indirect
 	github.com/minio/sha256-simd v1.0.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/patternmatcher v0.6.0 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
@@ -50,7 +51,7 @@ require (
 
 replace (
 	github.com/docker/cli => github.com/docker/cli v25.0.3+incompatible
-	github.com/docker/docker => github.com/docker/docker v25.0.3+incompatible
+	github.com/docker/docker => github.com/docker/docker v26.0.2+incompatible
 )
 
 require (
