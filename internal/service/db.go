@@ -1,22 +1,38 @@
 package service
 
 import (
+	"database/sql"
 	"errors"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient"
+	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
 type Dboptions struct {
 	Filename string
+	DSN      string
 }
 
 // SetUpDatabase will connect to the selected DB and run pending migrations
 func SetUpDatabase(opts Dboptions) (*gorm.DB, error) {
 	// TODO: currently we're only supporting sqlite for dev
 	// going forward, this will run on mysql - but both should be selected
+	db := &gorm.DB{}
+	var err error
 
-	db, err := gorm.Open(sqlite.Open(opts.Filename), &gorm.Config{})
+	// set up the database connection based on the DbOptions
+	if opts.Filename != "" {
+		db, err = gorm.Open(sqlite.Open(opts.Filename), &gorm.Config{})
+	} else if opts.DSN != "" {
+		pgDB, err2 := sql.Open("pgx", opts.DSN)
+		if err2 != nil {
+			return db, err
+		}
+		db, err = gorm.Open(postgres.New(postgres.Config{
+			Conn: pgDB,
+		}), &gorm.Config{})
+	}
 	if err != nil {
 		return db, err
 	}
