@@ -21,13 +21,13 @@ func SetUpDatabase(opts Dboptions) (*gorm.DB, error) {
 	db := &gorm.DB{}
 	var err error
 
-	// set up the database connection based on the DbOptions
+	// set up the database connection based on the DbOptions | Filename - sqlite | DSN - postgres
 	if opts.Filename != "" {
 		db, err = gorm.Open(sqlite.Open(opts.Filename), &gorm.Config{})
 	} else if opts.DSN != "" {
-		pgDB, err2 := sql.Open("pgx", opts.DSN)
-		if err2 != nil {
-			return db, err
+		pgDB, pgErr := sql.Open("pgx", opts.DSN)
+		if pgErr != nil {
+			return db, pgErr
 		}
 		db, err = gorm.Open(postgres.New(postgres.Config{
 			Conn: pgDB,
