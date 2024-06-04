@@ -52,7 +52,7 @@ replace (
 )
 
 require (
-	github.com/CycloneDX/cyclonedx-go v0.8.0
+	github.com/CycloneDX/cyclonedx-go v0.9.0
 	github.com/cheekybits/is v0.0.0-20150225183255-68e9c0620927 // indirect
 	github.com/fsouza/go-dockerclient v1.7.3 // indirect
 	github.com/minio/minio-go/v7 v7.0.69
