@@ -217,7 +217,11 @@ func main() {
 		DSN: fmt.Sprintf("amqp://%s:%s@%s/", broker.Username, broker.Password, broker.Hostname),
 	}
 
-	db, err := service.SetUpDatabase(service.Dboptions{Filename: "database.sql"})
+	// Set up a sqlite database
+	//db, err := service.SetUpDatabase(service.Dboptions{Filename: "database.sql"})
+
+	// Set up a postgres database
+	db, err := service.SetUpDatabase(service.Dboptions{DSN: "host=postgres-16 user=lagoon password=lagoon dbname=lagoon port=5433 sslmode=disable TimeZone=Asia/Shanghai"})
 	if err != nil {
 		slog.Error(err.Error())
 		os.Exit(1)

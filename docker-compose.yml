@@ -1,0 +1,10 @@
+version: '2'
+
+# For testing purposes
+services:
+  postgres-16:
+    image: uselagoon/postgres-16:latest
+    labels:
+      lagoon.type: postgres
+    ports:
+      - '5433:5432'
