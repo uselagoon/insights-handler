@@ -218,3 +218,68 @@ func Test_processFactsFromSBOM(t *testing.T) {
 		})
 	}
 }
+
+func Test_processFactsFromSBOMWithNoComponents(t *testing.T) {
+	type args struct {
+		bom           *[]cdx.Component
+		environmentId int
+		source        string
+	}
+
+	testResponse, err := ioutil.ReadFile("./testassets/testSbomPayloadNoComponents.json")
+	if err != nil {
+		t.Fatalf("Could not open file")
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			t.Errorf("Expected to request '/fixedvalue', got: %s", r.URL.Path)
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write(testResponse)
+	}))
+	defer server.Close()
+
+	bom := new(cdx.BOM)
+	resp, err := http.Get(server.URL)
+	if err != nil {
+		panic(err)
+	}
+	decoder := cdx.NewBOMDecoder(resp.Body, cdx.BOMFileFormatJSON)
+	if err = decoder.Decode(bom); err != nil {
+		panic(err)
+	}
+
+	tests := []struct {
+		name string
+		args args
+		want []lagoonclient.AddFactInput
+	}{
+		{
+			name: "sbom.cdx.json",
+			args: args{
+				bom:           bom.Components,
+				environmentId: 3,
+				source:        "syft",
+			},
+			want: []lagoonclient.AddFactInput{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := processFactsFromSBOM(slog.Default(), tt.args.bom, tt.args.environmentId, tt.args.source)
+			if len(got) != len(tt.want) {
+				t.Errorf("processFactsFromSBOM() returned %d results, want %d", len(got), len(tt.want))
+			}
+			for i := range tt.want {
+				if got[i].Environment != tt.want[i].Environment ||
+					got[i].Name != tt.want[i].Name ||
+					got[i].Value != tt.want[i].Value ||
+					got[i].Source != tt.want[i].Source ||
+					got[i].Description != tt.want[i].Description ||
+					got[i].KeyFact != tt.want[i].KeyFact {
+					t.Errorf("processFactsFromSBOM()[%d] = %v, want %v", i, got[i], tt.want[i])
+				}
+			}
+		})
+	}
+}
