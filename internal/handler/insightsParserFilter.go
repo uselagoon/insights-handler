@@ -68,7 +68,7 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 
 func processFactsFromSBOM(logger *slog.Logger, facts *[]cdx.Component, environmentId int, source string) []LagoonFact {
 	var factsInput []LagoonFact
-	if len(*facts) == 0 {
+	if facts == nil || len(*facts) == 0 {
 		return factsInput
 	}
 
