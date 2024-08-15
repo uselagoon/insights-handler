@@ -3,7 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/cheshir/go-mq"
+	"github.com/cheshir/go-mq/v2"
 	"log/slog"
 	"sort"
 	"strconv"
