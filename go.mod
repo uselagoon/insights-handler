@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/Khan/genqlient v0.7.0
-	github.com/cheshir/go-mq v1.0.2
+	github.com/cheshir/go-mq v1.2.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/joho/godotenv v1.5.1
 	github.com/matryer/try v0.0.0-20161228173917-9ac251b645a2
