@@ -2,4 +2,5 @@
 .env
 internal/handler/testassets/bin/*
 
+lagoon-core.*
 local-dev/
