@@ -2,3 +2,4 @@
 .env
 internal/handler/testassets/bin/*
 
+local-dev/

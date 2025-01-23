@@ -56,7 +56,7 @@ func TestFactProcessor_TestMultipleFilters(t *testing.T) {
 	}
 }
 
-//ProcessLagoonFactAgainstRegisteredFilters
+// ProcessLagoonFactAgainstRegisteredFilters
 func TestFactProcessor_ProcessLagoonFactAgainstRegisteredFilters(t *testing.T) {
 
 	fact := LagoonFact{
