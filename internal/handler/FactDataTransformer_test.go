@@ -71,6 +71,9 @@ func TestFactProcessor_ProcessLagoonFactAgainstRegisteredFilters(t *testing.T) {
 		Category:    "",
 	}
 
+	poppedFactFilters := KeyFactFilters
+	defer func() { KeyFactFilters = poppedFactFilters }()
+
 	KeyFactFilters = []func(filter parserFilter) parserFilter{
 		func(filter parserFilter) parserFilter {
 			return filter.
