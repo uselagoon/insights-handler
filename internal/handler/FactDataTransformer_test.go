@@ -56,7 +56,7 @@ func TestFactProcessor_TestMultipleFilters(t *testing.T) {
 	}
 }
 
-//ProcessLagoonFactAgainstRegisteredFilters
+// ProcessLagoonFactAgainstRegisteredFilters
 func TestFactProcessor_ProcessLagoonFactAgainstRegisteredFilters(t *testing.T) {
 
 	fact := LagoonFact{
@@ -70,6 +70,9 @@ func TestFactProcessor_ProcessLagoonFactAgainstRegisteredFilters(t *testing.T) {
 		Type:        "",
 		Category:    "",
 	}
+
+	poppedFactFilters := KeyFactFilters
+	defer func() { KeyFactFilters = poppedFactFilters }()
 
 	KeyFactFilters = []func(filter parserFilter) parserFilter{
 		func(filter parserFilter) parserFilter {

@@ -112,13 +112,10 @@ func typeMap(alias string) string {
 	switch alias {
 	case "EnvironmentVariable":
 		return "handler.EnvironmentVariable"
-		break
 	case "Package":
 		return "cyclonedx.Component"
-		break
 	case "InspectLabel":
 		return "handler.InsightsInspectLabel"
-		break
 	}
 	return alias
 }
