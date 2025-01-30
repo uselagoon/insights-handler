@@ -29,6 +29,7 @@ require (
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/patternmatcher v0.6.0 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
+	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc2.0.20221005185240-3a7f492d3f1b // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -46,7 +47,7 @@ require (
 
 replace (
 	github.com/docker/cli => github.com/docker/cli v25.0.3+incompatible
-	github.com/docker/docker => github.com/docker/docker v26.0.2+incompatible
+	github.com/docker/docker => github.com/docker/docker v27.5.1+incompatible
 )
 
 require (
