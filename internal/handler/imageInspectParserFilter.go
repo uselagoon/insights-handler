@@ -101,6 +101,7 @@ func processFactsFromImageInspect(logger *slog.Logger, imageInspectData ImageDat
 			Description: "Environment Variable",
 			KeyFact:     false,
 			Type:        FactTypeText,
+			Service:     strings.TrimPrefix(source, "insights:image:"),
 		}
 
 		logger.Debug("Processing environment fact", "name", f.Key, "value", f.Value)

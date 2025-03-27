@@ -116,6 +116,7 @@ input AddFactInput {
   keyFact: Boolean
   type: FactType
   category: String
+  service: String
 }
 
 input AddFactReferenceInput {

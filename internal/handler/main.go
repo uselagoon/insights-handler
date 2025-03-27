@@ -135,6 +135,7 @@ type LagoonFact struct {
 	KeyFact     bool   `json:"keyFact"`
 	Type        string `json:"type"`
 	Category    string `json:"category"`
+	Service     string `json:"service"`
 }
 
 const (
@@ -301,6 +302,9 @@ func (h *Messaging) gatherFactsFromInsightData(incoming *InsightsMessage, resour
 		for _, p := range incoming.BinaryPayload {
 			binaryPayload = p
 			break
+		}
+		for _, l := range incoming.Labels {
+			fmt.Println(l)
 		}
 		lagoonSourceFactMap := LagoonSourceFactMap{}
 		// since we only have two parser filter types now - let's explicitly call them
@@ -573,6 +577,7 @@ func (h *Messaging) pushFactsToLagoonApi(facts []LagoonFact, resource ResourceDe
 			KeyFact:     fact.KeyFact,
 			Type:        lagoonclient.FactType(fact.Type),
 			Category:    fact.Category,
+			Service:     fact.Service,
 		}
 
 	}

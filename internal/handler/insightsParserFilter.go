@@ -5,6 +5,7 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/Khan/genqlient/graphql"
 	"log/slog"
+	"strings"
 )
 
 func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonFact, string, error) {
@@ -92,6 +93,7 @@ func processFactsFromSBOM(logger *slog.Logger, facts *[]cdx.Component, environme
 			Description: f.PackageURL,
 			KeyFact:     false,
 			Type:        FactTypeText,
+			Service:     strings.TrimPrefix(source, "insights:sbom:"),
 		}
 		//if EnableDebug {
 		//	log.Println("[DEBUG] processing fact name " + f.Name)
