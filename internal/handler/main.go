@@ -303,9 +303,6 @@ func (h *Messaging) gatherFactsFromInsightData(incoming *InsightsMessage, resour
 			binaryPayload = p
 			break
 		}
-		for _, l := range incoming.Labels {
-			fmt.Println(l)
-		}
 		lagoonSourceFactMap := LagoonSourceFactMap{}
 		// since we only have two parser filter types now - let's explicitly call them
 
