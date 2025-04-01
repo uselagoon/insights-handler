@@ -244,6 +244,19 @@ transforms:
           - name: Description
             value: The currently installed Wordpress version
       keyfact: true
+    - type: cyclonedx.Component
+      lookupvalue:
+        - name: Name
+          value: rails
+          exactMatch: true
+      transformations:
+        - name: Name
+          value: Ruby on Rails
+        - name: Category
+          value: Application
+        - name: Description
+          value: The currently installed Rails version
+      keyfact: true
 
 # Helper Transformers
     - type: cyclonedx.Component
