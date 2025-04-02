@@ -283,6 +283,18 @@ transforms:
         - name: Description
           value: The currently installed Laravel version
       keyfact: true
+      lookupvalue:
+        - name: Name
+          value: wagtail
+          exactMatch: true
+      transformations:
+        - name: Name
+          value: Laravel
+        - name: Category
+          value: Application
+        - name: Description
+          value: The currently installed Wagtail version
+      keyfact: true
 
 # Helper Transformers
     - type: cyclonedx.Component
