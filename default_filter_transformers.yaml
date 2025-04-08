@@ -244,6 +244,57 @@ transforms:
           - name: Description
             value: The currently installed Wordpress version
       keyfact: true
+    - type: cyclonedx.Component
+      lookupvalue:
+        - name: Name
+          value: rails
+          exactMatch: true
+      transformations:
+        - name: Name
+          value: Ruby on Rails
+        - name: Category
+          value: Application
+        - name: Description
+          value: The currently installed Rails version
+      keyfact: true
+    - type: cyclonedx.Component
+      lookupvalue:
+        - name: Name
+          value: typo3/cms-core
+          exactMatch: true
+      transformations:
+        - name: Name
+          value: TYPO3
+        - name: Category
+          value: Application
+        - name: Description
+          value: The currently installed typo3/cms version
+      keyfact: true
+    - type: cyclonedx.Component
+      lookupvalue:
+        - name: Name
+          value: laravel/framework
+          exactMatch: true
+      transformations:
+        - name: Name
+          value: Laravel
+        - name: Category
+          value: Application
+        - name: Description
+          value: The currently installed Laravel version
+      keyfact: true
+      lookupvalue:
+        - name: Name
+          value: wagtail
+          exactMatch: true
+      transformations:
+        - name: Name
+          value: Laravel
+        - name: Category
+          value: Application
+        - name: Description
+          value: The currently installed Wagtail version
+      keyfact: true
 
 # Helper Transformers
     - type: cyclonedx.Component
