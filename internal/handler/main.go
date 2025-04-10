@@ -67,6 +67,9 @@ type InsightsMessage struct {
 	Annotations   map[string]string `json:"annotations"`
 	Labels        map[string]string `json:"labels"`
 	Type          string            `json:"type,omitempty"`
+	Environment   string            `json:"environment"`
+	Project       string            `json:"project"`
+	Service       string            `json:"service"`
 }
 
 type PayloadInput struct {

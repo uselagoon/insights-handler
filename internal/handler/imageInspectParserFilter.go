@@ -25,6 +25,7 @@ type ImageData struct {
 
 func processImageInspectInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonFact, string, error) {
 	source := fmt.Sprintf("insights:image:%s", resource.Service)
+	service := resource.Service
 	logger := slog.With("ProjectName", resource.Project, "EnvironmentName", resource.Environment, "Source", source)
 	if insights.InsightsType == Image {
 
@@ -34,12 +35,12 @@ func processImageInspectInsightsData(h *Messaging, insights InsightsData, v stri
 		}
 		environmentId := environment.Id
 
-		return ProcessImageInspectData(v, logger, environmentId, source)
+		return ProcessImageInspectData(v, logger, environmentId, source, service)
 	}
 	return []LagoonFact{}, "", nil
 }
 
-func ProcessImageInspectData(v string, logger *slog.Logger, environmentId int, source string) ([]LagoonFact, string, error) {
+func ProcessImageInspectData(v string, logger *slog.Logger, environmentId int, source string, service string) ([]LagoonFact, string, error) {
 	decoded, err := decodeGzipString(v)
 	if err != nil {
 		return nil, "", err
@@ -53,7 +54,7 @@ func ProcessImageInspectData(v string, logger *slog.Logger, environmentId int, s
 		return nil, "", err
 	}
 
-	facts, err := processFactsFromImageInspect(logger, imageInspect, environmentId, source)
+	facts, err := processFactsFromImageInspect(logger, imageInspect, environmentId, source, service)
 	if err != nil {
 		return nil, "", err
 	}
@@ -66,7 +67,7 @@ func ProcessImageInspectData(v string, logger *slog.Logger, environmentId int, s
 	return facts, source, nil
 }
 
-func processFactsFromImageInspect(logger *slog.Logger, imageInspectData ImageData, id int, source string) ([]LagoonFact, error) {
+func processFactsFromImageInspect(logger *slog.Logger, imageInspectData ImageData, id int, source string, service string) ([]LagoonFact, error) {
 
 	var factsInput []LagoonFact
 
@@ -101,7 +102,7 @@ func processFactsFromImageInspect(logger *slog.Logger, imageInspectData ImageDat
 			Description: "Environment Variable",
 			KeyFact:     false,
 			Type:        FactTypeText,
-			Service:     strings.TrimPrefix(source, "insights:image:"),
+			Service:     service,
 		}
 
 		logger.Debug("Processing environment fact", "name", f.Key, "value", f.Value)
