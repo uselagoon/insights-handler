@@ -11,7 +11,7 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 
 	source := fmt.Sprintf("insights:sbom:%s", resource.Service)
 	logger := slog.With("ProjectName", resource.Project, "EnvironmentName", resource.Environment, "Source", source)
-
+	service := resource.Service
 	if insights.InsightsType != Sbom {
 		return []LagoonFact{}, "", nil
 	}
@@ -45,7 +45,7 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 	}
 
 	// Process SBOM into facts
-	facts := processFactsFromSBOM(logger, bom.Components, environment.Id, source)
+	facts := processFactsFromSBOM(logger, bom.Components, environment.Id, source, service)
 
 	facts, err = KeyFactsFilter(facts)
 	if err != nil {
@@ -66,7 +66,7 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 	return facts, source, nil
 }
 
-func processFactsFromSBOM(logger *slog.Logger, facts *[]cdx.Component, environmentId int, source string) []LagoonFact {
+func processFactsFromSBOM(logger *slog.Logger, facts *[]cdx.Component, environmentId int, source string, service string) []LagoonFact {
 	var factsInput []LagoonFact
 	if facts == nil || len(*facts) == 0 {
 		return factsInput
@@ -92,6 +92,7 @@ func processFactsFromSBOM(logger *slog.Logger, facts *[]cdx.Component, environme
 			Description: f.PackageURL,
 			KeyFact:     false,
 			Type:        FactTypeText,
+			Service:     service,
 		}
 		//if EnableDebug {
 		//	log.Println("[DEBUG] processing fact name " + f.Name)

@@ -14,6 +14,7 @@ func Test_processFactsFromImageInspect(t *testing.T) {
 		imageInspectDataSource string
 		id                     int
 		source                 string
+		service                string
 	}
 	tests := []struct {
 		name     string
@@ -54,7 +55,7 @@ func Test_processFactsFromImageInspect(t *testing.T) {
 				panic(1)
 			}
 
-			got, err := processFactsFromImageInspect(tt.args.logger, imageInspectData, tt.args.id, tt.args.source)
+			got, err := processFactsFromImageInspect(tt.args.logger, imageInspectData, tt.args.id, tt.args.source, tt.args.service)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("processFactsFromImageInspect() error = %v, wantErr %v", err, tt.wantErr)
 				return

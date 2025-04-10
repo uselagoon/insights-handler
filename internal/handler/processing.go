@@ -57,6 +57,7 @@ func processFactsDirectly(message mq.Message, h *Messaging) string {
 			KeyFact:     false,
 			Type:        lagoonclient.FactType(vartypeString),
 			Category:    fact.Category,
+			Service:     fact.Service,
 		}
 		factSources[fact.Source] = fact.Source
 	}

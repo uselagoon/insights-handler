@@ -17,6 +17,7 @@ func TestFactProcessor_TestMultipleFilters(t *testing.T) {
 		KeyFact:     false,
 		Type:        "",
 		Category:    "",
+		Service:     "",
 	}
 
 	fp1 := FactProcessor{
@@ -69,6 +70,7 @@ func TestFactProcessor_ProcessLagoonFactAgainstRegisteredFilters(t *testing.T) {
 		KeyFact:     false,
 		Type:        "",
 		Category:    "",
+		Service:     "",
 	}
 
 	poppedFactFilters := KeyFactFilters
@@ -181,6 +183,7 @@ func TestFactProcessor_TestSetFriendlyName(t *testing.T) {
 			KeyFact:     false,
 			Type:        "",
 			Category:    "",
+			Service:     "",
 		},
 		InsightsData: EnvironmentVariable{
 			Key:   "testkey",
@@ -213,6 +216,7 @@ func TestFactProcessor_TestExactMatchLookup(t *testing.T) {
 				KeyFact:     false,
 				Type:        "",
 				Category:    "",
+				Service:     "",
 			},
 			InsightsData: EnvironmentVariable{
 				Key:   "testkey",
