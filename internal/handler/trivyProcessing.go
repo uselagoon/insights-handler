@@ -17,10 +17,10 @@ import (
 
 const problemSource = "insights-handler-trivy"
 
-func SbomToProblems(apiClient graphql.Client, trivyRemoteAddress string, bomWriteDirectory string, environmentId int, service string, sbom cdx.BOM) error {
+func SbomToProblems(apiClient graphql.Client, trivyRemoteAddress string, bomWriteDirectory string, environmentId int, service string, sbom cdx.BOM) ([]lagoonclient.LagoonProblem, error) {
 	problemsArray, err := executeProcessingTrivy(trivyRemoteAddress, bomWriteDirectory, sbom)
 	if err != nil {
-		return fmt.Errorf("unable to execute trivy processing: %v", err.Error())
+		return problemsArray, fmt.Errorf("unable to execute trivy processing: %v", err.Error())
 	}
 
 	for i := 0; i < len(problemsArray); i++ {
@@ -29,11 +29,7 @@ func SbomToProblems(apiClient graphql.Client, trivyRemoteAddress string, bomWrit
 		problemsArray[i].Source = problemSource
 	}
 
-	err = writeProblemsArrayToApi(apiClient, environmentId, problemSource, service, problemsArray)
-	if err != nil {
-		return fmt.Errorf("unable to execute trivy processing- writing problems to api: %v", err.Error())
-	}
-	return nil
+	return problemsArray, nil
 }
 
 func convertBOMToProblemsArray(environment int, source string, service string, bom cdx.BOM) ([]lagoonclient.LagoonProblem, error) {
