@@ -15,7 +15,7 @@ COPY main.go main.go
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} go build -a -o insights-handler main.go
 
 # we pull the trivy binary from aquasec's alpine based image
-FROM aquasec/trivy:0.59.1 AS trivy
+FROM aquasec/trivy:0.62.1 AS trivy
 
 # Use distroless as minimal base image to package the insights-handler binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
