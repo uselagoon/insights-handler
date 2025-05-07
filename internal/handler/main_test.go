@@ -140,7 +140,6 @@ func Test_processFactsFromSBOM(t *testing.T) {
 		bom           *[]cdx.Component
 		environmentId int
 		source        string
-		service       string
 	}
 
 	testResponse, err := ioutil.ReadFile("./testassets/testSbomPayload.json")
@@ -202,7 +201,7 @@ func Test_processFactsFromSBOM(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := processFactsFromSBOM(slog.Default(), tt.args.bom, tt.args.environmentId, tt.args.source, tt.args.service)
+			got := processFactsFromSBOM(slog.Default(), tt.args.bom, tt.args.environmentId, tt.args.source)
 			if len(got) != len(tt.want) {
 				t.Errorf("processFactsFromSBOM() returned %d results, want %d", len(got), len(tt.want))
 			}
@@ -225,7 +224,6 @@ func Test_processFactsFromSBOMWithNoComponents(t *testing.T) {
 		bom           *[]cdx.Component
 		environmentId int
 		source        string
-		service       string
 	}
 
 	testResponse, err := ioutil.ReadFile("./testassets/testSbomPayloadNoComponents.json")
@@ -268,7 +266,7 @@ func Test_processFactsFromSBOMWithNoComponents(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := processFactsFromSBOM(slog.Default(), tt.args.bom, tt.args.environmentId, tt.args.source, tt.args.service)
+			got := processFactsFromSBOM(slog.Default(), tt.args.bom, tt.args.environmentId, tt.args.source)
 			if len(got) != len(tt.want) {
 				t.Errorf("processFactsFromSBOM() returned %d results, want %d", len(got), len(tt.want))
 			}
