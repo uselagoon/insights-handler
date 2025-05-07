@@ -283,6 +283,7 @@ transforms:
         - name: Description
           value: The currently installed Laravel version
       keyfact: true
+    - type: cyclonedx.Component
       lookupvalue:
         - name: Name
           value: wagtail
