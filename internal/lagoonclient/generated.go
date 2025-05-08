@@ -18,7 +18,6 @@ type AddFactInput struct {
 	KeyFact     bool     `json:"keyFact"`
 	Type        FactType `json:"type"`
 	Category    string   `json:"category"`
-	Service     string   `json:"service"`
 }
 
 // GetId returns AddFactInput.Id, and is useful for accessing the field via an interface.
@@ -48,9 +47,6 @@ func (v *AddFactInput) GetType() FactType { return v.Type }
 // GetCategory returns AddFactInput.Category, and is useful for accessing the field via an interface.
 func (v *AddFactInput) GetCategory() string { return v.Category }
 
-// GetService returns AddFactInput.Service, and is useful for accessing the field via an interface.
-func (v *AddFactInput) GetService() string { return v.Service }
-
 type FactType string
 
 const (
@@ -58,12 +54,6 @@ const (
 	FactTypeUrl    FactType = "URL"
 	FactTypeSemver FactType = "SEMVER"
 )
-
-var AllFactType = []FactType{
-	FactTypeText,
-	FactTypeUrl,
-	FactTypeSemver,
-}
 
 type ProblemSeverityRating string
 
@@ -76,16 +66,6 @@ const (
 	ProblemSeverityRatingHigh       ProblemSeverityRating = "HIGH"
 	ProblemSeverityRatingCritical   ProblemSeverityRating = "CRITICAL"
 )
-
-var AllProblemSeverityRating = []ProblemSeverityRating{
-	ProblemSeverityRatingNone,
-	ProblemSeverityRatingUnknown,
-	ProblemSeverityRatingNegligible,
-	ProblemSeverityRatingLow,
-	ProblemSeverityRatingMedium,
-	ProblemSeverityRatingHigh,
-	ProblemSeverityRatingCritical,
-}
 
 // __addFactsInput is used internally by genqlient
 type __addFactsInput struct {
@@ -337,7 +317,7 @@ func (v *getProjectByNameResponse) GetProjectByName() getProjectByNameProjectByN
 	return v.ProjectByName
 }
 
-// The mutation executed by addFacts.
+// The query or mutation executed by addFacts.
 const addFacts_Operation = `
 mutation addFacts ($facts: [AddFactInput]!) {
 	addFacts(input: {facts:$facts}) {
@@ -347,31 +327,32 @@ mutation addFacts ($facts: [AddFactInput]!) {
 `
 
 func addFacts(
-	ctx_ context.Context,
-	client_ graphql.Client,
+	ctx context.Context,
+	client graphql.Client,
 	facts []AddFactInput,
-) (data_ *addFactsResponse, err_ error) {
-	req_ := &graphql.Request{
+) (*addFactsResponse, error) {
+	req := &graphql.Request{
 		OpName: "addFacts",
 		Query:  addFacts_Operation,
 		Variables: &__addFactsInput{
 			Facts: facts,
 		},
 	}
+	var err error
 
-	data_ = &addFactsResponse{}
-	resp_ := &graphql.Response{Data: data_}
+	var data addFactsResponse
+	resp := &graphql.Response{Data: &data}
 
-	err_ = client_.MakeRequest(
-		ctx_,
-		req_,
-		resp_,
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
 	)
 
-	return data_, err_
+	return &data, err
 }
 
-// The mutation executed by addProblem.
+// The query or mutation executed by addProblem.
 const addProblem_Operation = `
 mutation addProblem ($environment: Int!, $severity: ProblemSeverityRating, $severityScore: SeverityScore, $identifier: String!, $service: String!, $source: String!, $associatedPackage: String, $description: String, $links: String, $verstion: String, $fixedVersion: String, $dataString: String!) {
 	addProblem(input: {environment:$environment,severity:$severity,severityScore:$severityScore,identifier:$identifier,service:$service,source:$source,associatedPackage:$associatedPackage,description:$description,links:$links,version:$verstion,fixedVersion:$fixedVersion,data:$dataString}) {
@@ -381,8 +362,8 @@ mutation addProblem ($environment: Int!, $severity: ProblemSeverityRating, $seve
 `
 
 func addProblem(
-	ctx_ context.Context,
-	client_ graphql.Client,
+	ctx context.Context,
+	client graphql.Client,
 	environment int,
 	severity ProblemSeverityRating,
 	severityScore float64,
@@ -395,8 +376,8 @@ func addProblem(
 	verstion string,
 	fixedVersion string,
 	dataString string,
-) (data_ *addProblemResponse, err_ error) {
-	req_ := &graphql.Request{
+) (*addProblemResponse, error) {
+	req := &graphql.Request{
 		OpName: "addProblem",
 		Query:  addProblem_Operation,
 		Variables: &__addProblemInput{
@@ -414,20 +395,21 @@ func addProblem(
 			DataString:        dataString,
 		},
 	}
+	var err error
 
-	data_ = &addProblemResponse{}
-	resp_ := &graphql.Response{Data: data_}
+	var data addProblemResponse
+	resp := &graphql.Response{Data: &data}
 
-	err_ = client_.MakeRequest(
-		ctx_,
-		req_,
-		resp_,
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
 	)
 
-	return data_, err_
+	return &data, err
 }
 
-// The mutation executed by deleteFactsFromSource.
+// The query or mutation executed by deleteFactsFromSource.
 const deleteFactsFromSource_Operation = `
 mutation deleteFactsFromSource ($environment: Int!, $source: String!) {
 	deleteFactsFromSource(input: {environment:$environment,source:$source})
@@ -435,12 +417,12 @@ mutation deleteFactsFromSource ($environment: Int!, $source: String!) {
 `
 
 func deleteFactsFromSource(
-	ctx_ context.Context,
-	client_ graphql.Client,
+	ctx context.Context,
+	client graphql.Client,
 	environment int,
 	source string,
-) (data_ *deleteFactsFromSourceResponse, err_ error) {
-	req_ := &graphql.Request{
+) (*deleteFactsFromSourceResponse, error) {
+	req := &graphql.Request{
 		OpName: "deleteFactsFromSource",
 		Query:  deleteFactsFromSource_Operation,
 		Variables: &__deleteFactsFromSourceInput{
@@ -448,20 +430,21 @@ func deleteFactsFromSource(
 			Source:      source,
 		},
 	}
+	var err error
 
-	data_ = &deleteFactsFromSourceResponse{}
-	resp_ := &graphql.Response{Data: data_}
+	var data deleteFactsFromSourceResponse
+	resp := &graphql.Response{Data: &data}
 
-	err_ = client_.MakeRequest(
-		ctx_,
-		req_,
-		resp_,
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
 	)
 
-	return data_, err_
+	return &data, err
 }
 
-// The mutation executed by deleteProblemsFromSource.
+// The query or mutation executed by deleteProblemsFromSource.
 const deleteProblemsFromSource_Operation = `
 mutation deleteProblemsFromSource ($environment: Int!, $source: String!, $service: String!) {
 	deleteProblemsFromSource(input: {environment:$environment,source:$source,service:$service})
@@ -469,13 +452,13 @@ mutation deleteProblemsFromSource ($environment: Int!, $source: String!, $servic
 `
 
 func deleteProblemsFromSource(
-	ctx_ context.Context,
-	client_ graphql.Client,
+	ctx context.Context,
+	client graphql.Client,
 	environment int,
 	source string,
 	service string,
-) (data_ *deleteProblemsFromSourceResponse, err_ error) {
-	req_ := &graphql.Request{
+) (*deleteProblemsFromSourceResponse, error) {
+	req := &graphql.Request{
 		OpName: "deleteProblemsFromSource",
 		Query:  deleteProblemsFromSource_Operation,
 		Variables: &__deleteProblemsFromSourceInput{
@@ -484,20 +467,21 @@ func deleteProblemsFromSource(
 			Service:     service,
 		},
 	}
+	var err error
 
-	data_ = &deleteProblemsFromSourceResponse{}
-	resp_ := &graphql.Response{Data: data_}
+	var data deleteProblemsFromSourceResponse
+	resp := &graphql.Response{Data: &data}
 
-	err_ = client_.MakeRequest(
-		ctx_,
-		req_,
-		resp_,
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
 	)
 
-	return data_, err_
+	return &data, err
 }
 
-// The query executed by getEnvironmentByName.
+// The query or mutation executed by getEnvironmentByName.
 const getEnvironmentByName_Operation = `
 query getEnvironmentByName ($name: String!, $project: Int!) {
 	environmentByName(name: $name, project: $project) {
@@ -508,12 +492,12 @@ query getEnvironmentByName ($name: String!, $project: Int!) {
 `
 
 func getEnvironmentByName(
-	ctx_ context.Context,
-	client_ graphql.Client,
+	ctx context.Context,
+	client graphql.Client,
 	name string,
 	project int,
-) (data_ *getEnvironmentByNameResponse, err_ error) {
-	req_ := &graphql.Request{
+) (*getEnvironmentByNameResponse, error) {
+	req := &graphql.Request{
 		OpName: "getEnvironmentByName",
 		Query:  getEnvironmentByName_Operation,
 		Variables: &__getEnvironmentByNameInput{
@@ -521,20 +505,21 @@ func getEnvironmentByName(
 			Project: project,
 		},
 	}
+	var err error
 
-	data_ = &getEnvironmentByNameResponse{}
-	resp_ := &graphql.Response{Data: data_}
+	var data getEnvironmentByNameResponse
+	resp := &graphql.Response{Data: &data}
 
-	err_ = client_.MakeRequest(
-		ctx_,
-		req_,
-		resp_,
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
 	)
 
-	return data_, err_
+	return &data, err
 }
 
-// The query executed by getEnvironmentFromId.
+// The query or mutation executed by getEnvironmentFromId.
 const getEnvironmentFromId_Operation = `
 query getEnvironmentFromId ($environment: Int!) {
 	environmentById(id: $environment) {
@@ -545,31 +530,32 @@ query getEnvironmentFromId ($environment: Int!) {
 `
 
 func getEnvironmentFromId(
-	ctx_ context.Context,
-	client_ graphql.Client,
+	ctx context.Context,
+	client graphql.Client,
 	environment int,
-) (data_ *getEnvironmentFromIdResponse, err_ error) {
-	req_ := &graphql.Request{
+) (*getEnvironmentFromIdResponse, error) {
+	req := &graphql.Request{
 		OpName: "getEnvironmentFromId",
 		Query:  getEnvironmentFromId_Operation,
 		Variables: &__getEnvironmentFromIdInput{
 			Environment: environment,
 		},
 	}
+	var err error
 
-	data_ = &getEnvironmentFromIdResponse{}
-	resp_ := &graphql.Response{Data: data_}
+	var data getEnvironmentFromIdResponse
+	resp := &graphql.Response{Data: &data}
 
-	err_ = client_.MakeRequest(
-		ctx_,
-		req_,
-		resp_,
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
 	)
 
-	return data_, err_
+	return &data, err
 }
 
-// The query executed by getProjectByName.
+// The query or mutation executed by getProjectByName.
 const getProjectByName_Operation = `
 query getProjectByName ($project: String!) {
 	projectByName(name: $project) {
@@ -580,26 +566,27 @@ query getProjectByName ($project: String!) {
 `
 
 func getProjectByName(
-	ctx_ context.Context,
-	client_ graphql.Client,
+	ctx context.Context,
+	client graphql.Client,
 	project string,
-) (data_ *getProjectByNameResponse, err_ error) {
-	req_ := &graphql.Request{
+) (*getProjectByNameResponse, error) {
+	req := &graphql.Request{
 		OpName: "getProjectByName",
 		Query:  getProjectByName_Operation,
 		Variables: &__getProjectByNameInput{
 			Project: project,
 		},
 	}
+	var err error
 
-	data_ = &getProjectByNameResponse{}
-	resp_ := &graphql.Response{Data: data_}
+	var data getProjectByNameResponse
+	resp := &graphql.Response{Data: &data}
 
-	err_ = client_.MakeRequest(
-		ctx_,
-		req_,
-		resp_,
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
 	)
 
-	return data_, err_
+	return &data, err
 }

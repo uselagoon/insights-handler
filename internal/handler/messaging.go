@@ -171,34 +171,6 @@ func preprocessIncomingMessageData(incoming *InsightsMessage) (ResourceDestinati
 		OutputFileMIMEType: "application/json",
 	}
 
-	// Prioritize the insights data over labels
-	if incoming.Project != "" {
-		resource.Project = incoming.Project
-	} else if label, ok := incoming.Labels["lagoon.sh/project"]; ok {
-		resource.Project = label
-	}
-
-	if incoming.Environment != "" {
-		resource.Environment = incoming.Environment
-	} else if label, ok := incoming.Labels["lagoon.sh/environment"]; ok {
-		resource.Environment = label
-	}
-
-	if incoming.Service != "" {
-		resource.Service = incoming.Service
-	} else if label, ok := incoming.Labels["lagoon.sh/service"]; ok {
-		resource.Service = label
-	}
-
-	if incoming.Type != "" {
-		insights.InputType = incoming.Type
-	} else if label, ok := incoming.Labels["lagoon.sh/insightsType"]; ok {
-		insights.InputType = label
-		if label == "image-gz" {
-			insights.LagoonType = ImageFacts
-		}
-	}
-
 	// Check labels for insights data from message
 	if incoming.Labels != nil {
 		labelKeys := make([]string, 0, len(incoming.Labels))
@@ -209,6 +181,17 @@ func preprocessIncomingMessageData(incoming *InsightsMessage) (ResourceDestinati
 
 		for _, label := range labelKeys {
 			switch label {
+			case "lagoon.sh/project":
+				resource.Project = incoming.Labels["lagoon.sh/project"]
+			case "lagoon.sh/environment":
+				resource.Environment = incoming.Labels["lagoon.sh/environment"]
+			case "lagoon.sh/service":
+				resource.Service = incoming.Labels["lagoon.sh/service"]
+			case "lagoon.sh/insightsType":
+				insights.InputType = incoming.Labels["lagoon.sh/insightsType"]
+				if incoming.Labels["lagoon.sh/insightsType"] == "image-gz" {
+					insights.LagoonType = ImageFacts
+				}
 			case "lagoon.sh/insightsOutputCompressed":
 				compressed, _ := strconv.ParseBool(incoming.Labels["lagoon.sh/insightsOutputCompressed"])
 				insights.OutputCompressed = compressed

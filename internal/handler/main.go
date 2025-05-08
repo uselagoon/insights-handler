@@ -67,9 +67,6 @@ type InsightsMessage struct {
 	Annotations   map[string]string `json:"annotations"`
 	Labels        map[string]string `json:"labels"`
 	Type          string            `json:"type,omitempty"`
-	Environment   string            `json:"environment"`
-	Project       string            `json:"project"`
-	Service       string            `json:"service"`
 }
 
 type PayloadInput struct {
@@ -138,7 +135,6 @@ type LagoonFact struct {
 	KeyFact     bool   `json:"keyFact"`
 	Type        string `json:"type"`
 	Category    string `json:"category"`
-	Service     string `json:"service"`
 }
 
 const (
@@ -577,7 +573,6 @@ func (h *Messaging) pushFactsToLagoonApi(facts []LagoonFact, resource ResourceDe
 			KeyFact:     fact.KeyFact,
 			Type:        lagoonclient.FactType(fact.Type),
 			Category:    fact.Category,
-			Service:     fact.Service,
 		}
 
 	}
