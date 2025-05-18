@@ -3,7 +3,7 @@ module github.com/uselagoon/lagoon/services/insights-handler
 go 1.23
 
 require (
-	github.com/Khan/genqlient v0.8.0
+	github.com/Khan/genqlient v0.8.1
 	github.com/cheshir/go-mq v1.2.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/joho/godotenv v1.5.1
