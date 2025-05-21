@@ -4,8 +4,8 @@ import (
 	"fmt"
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/Khan/genqlient/graphql"
+	"github.com/uselagoon/machinery/utils/namespace"
 	"log/slog"
-	"strings"
 )
 
 func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiClient graphql.Client, resource ResourceDestination) ([]LagoonFact, string, error) {
@@ -22,14 +22,7 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 		return []LagoonFact{}, "", err
 	}
 
-	// Determine lagoon resource destination
-	// let's grab the environment via the kubernetes namespace
-	// first, let's convert all "/" to "-" in the project and environment names
-	projectName := strings.Replace(resource.Project, "/", "-", -1)
-	environmentName := strings.Replace(resource.Environment, "/", "-", -1)
-	kubernetesNamespaceName := fmt.Sprintf("%s-%s", projectName, environmentName)
-
-	//_, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
+	kubernetesNamespaceName := namespace.GenerateNamespaceName("", resource.Environment, resource.Project, "", "", false)
 	_, environment, apiErr := determineResourceFromLagoonAPIByKubernetesNamespace(apiClient, kubernetesNamespaceName)
 	if apiErr != nil {
 		return nil, "", apiErr

@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/uselagoon/machinery/utils/namespace"
 	"io"
 	"io/ioutil"
 	"log"
@@ -446,10 +447,7 @@ func determineResourceFromLagoonAPIByKubernetesNamespace(apiClient graphql.Clien
 func determineResourceFromLagoonAPI(apiClient graphql.Client, resource ResourceDestination) (lagoonclient.Project, lagoonclient.Environment, error) {
 	// Determine lagoon resource destination
 	// let's grab the environment via the kubernetes namespace
-	// first, let's convert all "/" to "-" in the project and environment names
-	projectName := strings.Replace(resource.Project, "/", "-", -1)
-	environmentName := strings.Replace(resource.Environment, "/", "-", -1)
-	kubernetesNamespaceName := fmt.Sprintf("%s-%s", projectName, environmentName)
+	kubernetesNamespaceName := namespace.GenerateNamespaceName("", resource.Environment, resource.Project, "", "", false)
 	return determineResourceFromLagoonAPIByKubernetesNamespace(apiClient, kubernetesNamespaceName)
 }
 
