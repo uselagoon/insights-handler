@@ -3,10 +3,10 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/cheshir/go-mq"
 	"log/slog"
-	"sort"
 	"strconv"
+
+	"github.com/cheshir/go-mq"
 )
 
 // Messaging is used for the config and client information for the messaging queue, including processing the queue itself.
@@ -171,36 +171,38 @@ func preprocessIncomingMessageData(incoming *InsightsMessage) (ResourceDestinati
 		OutputFileMIMEType: "application/json",
 	}
 
-	// Check labels for insights data from message
-	if incoming.Labels != nil {
-		labelKeys := make([]string, 0, len(incoming.Labels))
-		for k := range incoming.Labels {
-			labelKeys = append(labelKeys, k)
+	// Check labels and annotations for insights data from message
+	// use the environment initially
+	if environment, ok := incoming.Labels["lagoon.sh/environment"]; ok {
+		resource.Environment = environment
+	}
+	// override with branch annotation if provided
+	if buildType, ok := incoming.Labels["lagoon.sh/buildType"]; ok && buildType != "pullrequest" {
+		if branch, ok := incoming.Annotations["lagoon.sh/branch"]; ok {
+			resource.Environment = branch
 		}
-		sort.Strings(labelKeys)
-
-		for _, label := range labelKeys {
-			switch label {
-			case "lagoon.sh/project":
-				resource.Project = incoming.Labels["lagoon.sh/project"]
-			case "lagoon.sh/environment":
-				resource.Environment = incoming.Labels["lagoon.sh/environment"]
-			case "lagoon.sh/service":
-				resource.Service = incoming.Labels["lagoon.sh/service"]
-			case "lagoon.sh/insightsType":
-				insights.InputType = incoming.Labels["lagoon.sh/insightsType"]
-				if incoming.Labels["lagoon.sh/insightsType"] == "image-gz" {
-					insights.LagoonType = ImageFacts
-				}
-			case "lagoon.sh/insightsOutputCompressed":
-				compressed, _ := strconv.ParseBool(incoming.Labels["lagoon.sh/insightsOutputCompressed"])
-				insights.OutputCompressed = compressed
-			case "lagoon.sh/insightsOutputFileMIMEType":
-				insights.OutputFileMIMEType = incoming.Labels["lagoon.sh/insightsOutputFileMIMEType"]
-			case "lagoon.sh/insightsOutputFileExt":
-				insights.OutputFileExt = incoming.Labels["lagoon.sh/insightsOutputFileExt"]
-			}
+	}
+	if project, ok := incoming.Labels["lagoon.sh/project"]; ok {
+		resource.Project = project
+	}
+	if service, ok := incoming.Labels["lagoon.sh/service"]; ok {
+		resource.Service = service
+	}
+	if insightsType, ok := incoming.Labels["lagoon.sh/insightsType"]; ok {
+		insights.InputType = insightsType
+		if insightsType == "image-gz" {
+			insights.LagoonType = ImageFacts
 		}
+	}
+	if outputCompress, ok := incoming.Labels["lagoon.sh/insightsOutputCompressed"]; ok {
+		compressed, _ := strconv.ParseBool(outputCompress)
+		insights.OutputCompressed = compressed
+	}
+	if insightsOutputFileMIMEType, ok := incoming.Labels["lagoon.sh/insightsOutputFileMIMEType"]; ok {
+		insights.OutputFileMIMEType = insightsOutputFileMIMEType
+	}
+	if insightsOutputFileExt, ok := incoming.Labels["lagoon.sh/insightsOutputFileExt"]; ok {
+		insights.OutputFileExt = insightsOutputFileExt
 	}
 
 	// Define insights type from incoming 'insightsType' label
