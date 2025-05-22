@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/uselagoon/machinery/utils/namespace"
 	"io"
 	"io/ioutil"
 	"log"
@@ -428,22 +429,26 @@ func (h *Messaging) getApiClient() graphql.Client {
 	return apiClient
 }
 
-func determineResourceFromLagoonAPI(apiClient graphql.Client, resource ResourceDestination) (lagoonclient.Project, lagoonclient.Environment, error) {
-	// Get project data (we need the project ID to be able to utilise the environmentByName query)
-	project, err := lagoonclient.GetProjectByName(context.TODO(), apiClient, resource.Project)
+func determineResourceFromLagoonAPIByKubernetesNamespace(apiClient graphql.Client, k8sNamespaceName string) (lagoonclient.Project, lagoonclient.Environment, error) {
+	project, environment, err := lagoonclient.GetEnvironmentFromKubernetesNamespaceName(context.TODO(), apiClient, k8sNamespaceName)
 	if err != nil {
-		return lagoonclient.Project{}, lagoonclient.Environment{}, fmt.Errorf("error: unable to determine resource destination (does %s:%s exist?): %v", resource.Project, resource.Environment, err.Error())
+		return lagoonclient.Project{}, lagoonclient.Environment{}, fmt.Errorf("error: unable to determine resource destination (does %s exist?): %v", k8sNamespaceName, err.Error())
 	}
-
 	if project.Id == 0 || project.Name == "" {
-		return lagoonclient.Project{}, lagoonclient.Environment{}, fmt.Errorf("error: unable to determine resource destination (does %s:%s exist?): %v", resource.Project, resource.Environment, err.Error())
+		return lagoonclient.Project{}, lagoonclient.Environment{}, fmt.Errorf("error: unable to determine resource destination (does %s exist?): %v", k8sNamespaceName, err.Error())
+	}
+	if environment.Id == 0 || environment.Name == "" {
+		return lagoonclient.Project{}, lagoonclient.Environment{}, fmt.Errorf("error: unable to determine resource destination (does %s exist?): %v", k8sNamespaceName, err.Error())
 	}
 
-	environment, err := lagoonclient.GetEnvironmentFromName(context.TODO(), apiClient, resource.Environment, project.Id)
-	if err != nil {
-		return lagoonclient.Project{}, lagoonclient.Environment{}, err
-	}
 	return project, environment, nil
+}
+
+func determineResourceFromLagoonAPI(apiClient graphql.Client, resource ResourceDestination) (lagoonclient.Project, lagoonclient.Environment, error) {
+	// Determine lagoon resource destination
+	// let's grab the environment via the kubernetes namespace
+	kubernetesNamespaceName := namespace.GenerateNamespaceName("", resource.Environment, resource.Project, "", "", false)
+	return determineResourceFromLagoonAPIByKubernetesNamespace(apiClient, kubernetesNamespaceName)
 }
 
 func (h *Messaging) sendToLagoonS3(incoming *InsightsMessage, insights InsightsData, resource ResourceDestination) (err error) {

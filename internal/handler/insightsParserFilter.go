@@ -4,6 +4,7 @@ import (
 	"fmt"
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/Khan/genqlient/graphql"
+	"github.com/uselagoon/machinery/utils/namespace"
 	"log/slog"
 )
 
@@ -21,8 +22,8 @@ func processSbomInsightsData(h *Messaging, insights InsightsData, v string, apiC
 		return []LagoonFact{}, "", err
 	}
 
-	// Determine lagoon resource destination
-	_, environment, apiErr := determineResourceFromLagoonAPI(apiClient, resource)
+	kubernetesNamespaceName := namespace.GenerateNamespaceName("", resource.Environment, resource.Project, "", "", false)
+	_, environment, apiErr := determineResourceFromLagoonAPIByKubernetesNamespace(apiClient, kubernetesNamespaceName)
 	if apiErr != nil {
 		return nil, "", apiErr
 	}

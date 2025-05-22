@@ -15,6 +15,17 @@ query getEnvironmentByName($name: String!, $project: Int!) {
     }
 }
 
+query getEnvironmentByNamespaceName($kubernetesNamespaceName: String!) {
+  environmentByKubernetesNamespaceName(kubernetesNamespaceName: $kubernetesNamespaceName) {
+    id
+    name
+    project {
+      id
+      name
+    }
+  }
+}
+
 query getEnvironmentFromId($environment: Int!) {
     environmentById(id: $environment) {
         id

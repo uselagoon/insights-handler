@@ -59,6 +59,25 @@ func GetEnvironmentFromName(ctx context.Context, client graphql.Client, environm
 	}, nil
 }
 
+func GetEnvironmentFromKubernetesNamespaceName(ctx context.Context, client graphql.Client, kubernetesNamespaceName string) (Project, Environment, error) {
+	var ret Environment
+	var retProject Project
+
+	resp, err := getEnvironmentByNamespaceName(ctx, client, kubernetesNamespaceName)
+	if err != nil {
+		return retProject, ret, err
+	}
+
+	return Project{
+			Id:   resp.EnvironmentByKubernetesNamespaceName.Project.Id,
+			Name: resp.EnvironmentByKubernetesNamespaceName.Project.Name,
+		}, Environment{
+			Id:   resp.EnvironmentByKubernetesNamespaceName.Id,
+			Name: resp.EnvironmentByKubernetesNamespaceName.Name,
+		}, nil
+
+}
+
 func GetEnvironmentFromID(ctx context.Context, client graphql.Client, environmentID int) (Environment, error) {
 	var ret Environment
 
