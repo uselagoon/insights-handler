@@ -77,3 +77,8 @@ PATH := $(PATH):$(PWD)/local-dev
 .PHONY: test
 test: fmt vet local-dev/trivy development-api
 	go test -v ./...
+
+.PHONY: docker-build
+docker-build:
+	DOCKER_BUILDKIT=1 docker build --rm -f Dockerfile -t uselagoon/insights-handler:local .
+
