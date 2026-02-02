@@ -52,7 +52,7 @@ require (
 )
 
 replace (
-	github.com/docker/cli => github.com/docker/cli v28.5.2+incompatible
+	github.com/docker/cli => github.com/docker/cli v29.2.1+incompatible
 	github.com/docker/docker => github.com/docker/docker v28.0.0+incompatible
 )
 
