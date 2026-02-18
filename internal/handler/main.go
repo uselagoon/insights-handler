@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/uselagoon/machinery/utils/namespace"
 	"io"
 	"io/ioutil"
 	"log"
@@ -18,6 +17,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/uselagoon/machinery/utils/namespace"
 
 	"github.com/Khan/genqlient/graphql"
 	"github.com/minio/minio-go/v7"
@@ -435,10 +436,10 @@ func determineResourceFromLagoonAPIByKubernetesNamespace(apiClient graphql.Clien
 		return lagoonclient.Project{}, lagoonclient.Environment{}, fmt.Errorf("error: unable to determine resource destination (does %s exist?): %v", k8sNamespaceName, err.Error())
 	}
 	if project.Id == 0 || project.Name == "" {
-		return lagoonclient.Project{}, lagoonclient.Environment{}, fmt.Errorf("error: unable to determine resource destination (does %s exist?): %v", k8sNamespaceName, err.Error())
+		return lagoonclient.Project{}, lagoonclient.Environment{}, fmt.Errorf("error: unable to determine resource destination (does %s exist?)", k8sNamespaceName)
 	}
 	if environment.Id == 0 || environment.Name == "" {
-		return lagoonclient.Project{}, lagoonclient.Environment{}, fmt.Errorf("error: unable to determine resource destination (does %s exist?): %v", k8sNamespaceName, err.Error())
+		return lagoonclient.Project{}, lagoonclient.Environment{}, fmt.Errorf("error: unable to determine resource destination (does %s exist?)", k8sNamespaceName)
 	}
 
 	return project, environment, nil
