@@ -2,7 +2,7 @@ module github.com/uselagoon/lagoon/services/insights-handler
 
 go 1.23.0
 
-toolchain go1.25.5
+toolchain go1.26.0
 
 require (
 	github.com/Khan/genqlient v0.8.1
