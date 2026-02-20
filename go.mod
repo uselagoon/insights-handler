@@ -6,7 +6,7 @@ toolchain go1.26.0
 
 require (
 	github.com/Khan/genqlient v0.8.1
-	github.com/cheshir/go-mq v1.2.0
+	github.com/cheshir/go-mq/v2 v2.0.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/joho/godotenv v1.5.1
 	github.com/matryer/try v0.0.0-20161228173917-9ac251b645a2
@@ -19,7 +19,6 @@ require (
 	github.com/NeowayLabs/wabbit v0.0.0-20210927194032-73ad61d1620e // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -31,7 +30,6 @@ require (
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/patternmatcher v0.6.0 // indirect
-	github.com/moby/sys/sequential v0.5.0 // indirect
 	github.com/moby/sys/user v0.1.0 // indirect
 	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc2.0.20221005185240-3a7f492d3f1b // indirect
@@ -41,14 +39,12 @@ require (
 	github.com/rabbitmq/amqp091-go v1.10.0 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/rs/xid v1.6.0 // indirect
-	github.com/streadway/amqp v1.1.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/tinylib/msgp v1.3.0 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.21 // indirect
 	golang.org/x/crypto v0.39.0 // indirect
 	golang.org/x/sys v0.34.0 // indirect
 	golang.org/x/text v0.26.0 // indirect
-	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
 
 replace (
@@ -59,9 +55,7 @@ replace (
 require (
 	github.com/CycloneDX/cyclonedx-go v0.10.0
 	github.com/cheekybits/is v0.0.0-20150225183255-68e9c0620927 // indirect
-	github.com/fsouza/go-dockerclient v1.7.3 // indirect
 	github.com/minio/minio-go/v7 v7.0.97
-	github.com/tiago4orion/conjure v0.0.0-20150908101743-93cb30b9d218 // indirect
 	golang.org/x/net v0.41.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1
 )

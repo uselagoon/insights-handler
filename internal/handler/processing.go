@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/Khan/genqlient/graphql"
-	"github.com/cheshir/go-mq"
+	"github.com/cheshir/go-mq/v2"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient"
 	"log/slog"
 	"net/http"
