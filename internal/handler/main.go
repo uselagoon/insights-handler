@@ -24,7 +24,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
-	"github.com/cheshir/go-mq"
+	"github.com/cheshir/go-mq/v2"
 	"github.com/matryer/try"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient/jwt"
