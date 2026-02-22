@@ -21,7 +21,7 @@ FROM aquasec/trivy:0.69.1 AS trivy
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 #FROM gcr.io/distroless/static:nonroot
 
-FROM alpine:3.22
+FROM alpine:3.23
 
 COPY --from=trivy /usr/local/bin/trivy /usr/local/bin/trivy
 
