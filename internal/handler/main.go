@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"bufio"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -10,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -589,7 +587,6 @@ func decodeGzipString(encodedString string) (result interface{}, err error) {
 
 	return data, nil
 }
-
 
 // toLagoonInsights sends logs to the lagoon-insights message queue
 func (h *Messaging) toLagoonInsights(messageQueue mq.MQ, message map[string]interface{}) {
