@@ -590,36 +590,6 @@ func decodeGzipString(encodedString string) (result interface{}, err error) {
 	return data, nil
 }
 
-// TODO: this seems to be dead code. Remove?
-func scanKeyFactsFile(file string) ([]string, error) {
-	var expectedKeyFacts []string
-
-	f, err := os.OpenFile(file, os.O_RDONLY, os.ModePerm)
-	if err != nil {
-		log.Fatalf("open file error: %v", err)
-		return nil, err
-	}
-	defer f.Close()
-
-	sc := bufio.NewScanner(f)
-	for sc.Scan() {
-		line := bytes.TrimSpace(sc.Bytes())
-		if len(line) == 0 {
-			continue
-		}
-		if !strings.HasPrefix(string(line), "#") {
-			expectedKeyFacts = append(expectedKeyFacts, sc.Text())
-		}
-	}
-	if err := sc.Err(); err != nil {
-		//TODO: Note that the pre-refactored behaviour is a FatalF, which should just exit the service completely
-		//log.Fatalf("scan file error: %v", err)
-		//return nil, err
-		slog.Error("Scan file Error", "Error", err.Error())
-		os.Exit(1)
-	}
-	return expectedKeyFacts, nil
-}
 
 // toLagoonInsights sends logs to the lagoon-insights message queue
 func (h *Messaging) toLagoonInsights(messageQueue mq.MQ, message map[string]interface{}) {
