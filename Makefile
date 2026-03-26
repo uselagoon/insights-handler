@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-TRIVY_VERSION=0.45.0
+TRIVY_VERSION=0.69.3
 
 ARCH := $(shell uname | tr '[:upper:]' '[:lower:]')
 
