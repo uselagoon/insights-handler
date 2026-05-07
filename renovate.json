@@ -12,5 +12,13 @@
     "dependencies"
   ],
   "dependencyDashboard": true,
-  "postUpdateOptions": ["gomodTidy","gomodUpdateImportPaths"]
+  "postUpdateOptions": ["gomodTidy","gomodUpdateImportPaths"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": ["^Makefile$"],
+      "matchStrings": ["# renovate: datasource=(?<datasource>[a-z]+) depName=(?<depName>[^\\n]+)\\n[A-Z_]+_VERSION=(?<currentValue>[0-9.]+)"],
+      "datasourceTemplate": "docker"
+    }
+  ]
 }

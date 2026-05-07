@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM golang:1.23-alpine3.19 AS builder
+FROM golang:1.26-alpine3.23 AS builder
 
 COPY . /go/src/github.com/uselagoon/lagoon/services/insights-handler/
 WORKDIR /go/src/github.com/uselagoon/lagoon/services/insights-handler/
@@ -15,7 +15,7 @@ COPY main.go main.go
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} go build -a -o insights-handler main.go
 
 # we pull the trivy binary from aquasec's alpine based image
-FROM aquasec/trivy:0.69.1 AS trivy
+FROM aquasec/trivy:0.69.3 AS trivy
 
 # Use distroless as minimal base image to package the insights-handler binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
