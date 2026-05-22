@@ -62,11 +62,12 @@ type S3 struct {
 }
 
 type InsightsMessage struct {
-	Payload       []PayloadInput    `json:"payload"`
-	BinaryPayload map[string]string `json:"binaryPayload"`
-	Annotations   map[string]string `json:"annotations"`
-	Labels        map[string]string `json:"labels"`
-	Type          string            `json:"type,omitempty"`
+	Payload         []PayloadInput    `json:"payload"`
+	BinaryPayload   map[string]string `json:"binaryPayload"`
+	Annotations     map[string]string `json:"annotations"`
+	Labels          map[string]string `json:"labels"`
+	Type            string            `json:"type,omitempty"`
+	RequeueAttempts int               `json:"requeueAttempts,omitempty"`
 }
 
 type PayloadInput struct {

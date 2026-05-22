@@ -19,10 +19,11 @@ type Messaging struct {
 	EnableDebug             bool
 	ProblemsFromSBOM        bool
 	TrivyServerEndpoint     string
+	MessageQWriter          func(data []byte) error
 }
 
 // NewMessaging returns a messaging with config
-func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts int, startupInterval int, enableDebug bool, problemsFromSBOM bool, trivyServerEndpoint string) *Messaging {
+func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts int, startupInterval int, enableDebug bool, problemsFromSBOM bool, trivyServerEndpoint string, MessageQWriter func(data []byte) error) *Messaging {
 	return &Messaging{
 		Config:                  config,
 		LagoonAPI:               lagoonAPI,
@@ -32,6 +33,7 @@ func NewMessaging(config mq.Config, lagoonAPI LagoonAPI, s3 S3, startupAttempts 
 		EnableDebug:             enableDebug,
 		ProblemsFromSBOM:        problemsFromSBOM,
 		TrivyServerEndpoint:     trivyServerEndpoint,
+		MessageQWriter:          MessageQWriter,
 	}
 }
 
@@ -54,6 +56,26 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 			err := message.Reject(requeue)
 			if err != nil {
 				slog.Error("Failed to reject message", "Error", err.Error())
+			}
+		}
+	}(message)
+
+	// Requeues the message a set number of times prior to rejecting it
+	rejectRequeue := func(message mq.Message) func(func(bool), *InsightsMessage, int, string, error) {
+		return func(rejectMessage func(bool), incoming *InsightsMessage, retryAttemptLimit int, target string, err error) {
+			incoming.RequeueAttempts++
+			updatedMessage, jsonErr := json.Marshal(incoming)
+			if jsonErr != nil {
+				slog.Error(jsonErr.Error())
+			}
+			if incoming.RequeueAttempts <= retryAttemptLimit {
+				rejectMessage(false)
+				if qErr := h.MessageQWriter(updatedMessage); qErr != nil {
+					slog.Error("Error re-queueing message", "Error", qErr.Error())
+				}
+			} else {
+				slog.Error(fmt.Sprintf("Retries failed, unable to send to %s", target), "Error", err.Error())
+				rejectMessage(false)
 			}
 		}
 	}(message)
@@ -122,7 +144,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 		if insights.InsightsType != Direct {
 			err := h.sendToLagoonS3(incoming, insights, resource)
 			if err != nil {
-				slog.Error("Unable to send to S3", "Error", err.Error())
+				rejectRequeue(rejectMessage, incoming, 3, "S3", err)
 			}
 		}
 	}
@@ -138,9 +160,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 			lagoonSourceFactMapCollection, err := h.gatherFactsFromInsightData(incoming, resource, insights)
 
 			if err != nil {
-				slog.Error("Unable to gather facts from incoming data", "Error", err.Error())
-				rejectMessage(false)
-				return
+				rejectRequeue(rejectMessage, incoming, 3, "Lagoon API", err)
 			}
 
 			// Here we actually go ahead and write all the facts with their source
