@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/cheshir/go-mq"
+	"github.com/cheshir/go-mq/v2"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/handler"
 	"log/slog"
 	"os"
