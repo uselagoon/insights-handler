@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 # renovate: datasource=docker depName=aquasec/trivy
-TRIVY_VERSION=0.70.0
+TRIVY_VERSION=0.72.0
 
 ARCH := $(shell uname | tr '[:upper:]' '[:lower:]')
 
