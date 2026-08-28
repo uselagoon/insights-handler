@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"strconv"
 
-	"github.com/cheshir/go-mq"
+	"github.com/cheshir/go-mq/v2"
 )
 
 // Messaging is used for the config and client information for the messaging queue, including processing the queue itself.

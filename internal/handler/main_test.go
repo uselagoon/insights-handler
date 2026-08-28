@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/cheshir/go-mq"
+	"github.com/cheshir/go-mq/v2"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/mock"
 	"github.com/uselagoon/lagoon/services/insights-handler/internal/lagoonclient"
