@@ -2,8 +2,6 @@ module github.com/uselagoon/lagoon/services/insights-handler
 
 go 1.26.3
 
-toolchain go1.26.3
-
 require (
 	github.com/Khan/genqlient v0.8.1
 	github.com/cheshir/go-mq v1.2.0
