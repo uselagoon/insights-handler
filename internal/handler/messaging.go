@@ -65,7 +65,7 @@ func (h *Messaging) processMessageQueue(message mq.Message) {
 	err := json.Unmarshal(message.Body(), incoming)
 
 	if err != nil {
-		fmt.Printf(err.Error())
+		slog.Error("Failed to unmarshal message body", "Error", err.Error())
 		acknowledgeMessage()
 		return
 	}
