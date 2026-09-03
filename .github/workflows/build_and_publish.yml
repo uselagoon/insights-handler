@@ -12,6 +12,14 @@ on:
 
 jobs:
   docker:
+    permissions:
+      # checkout
+      contents: read
+      # image push
+      packages: write
+      # required by attest-build-provenance
+      id-token: write
+      attestations: write
     runs-on: ubuntu-latest
     steps:
       -
