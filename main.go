@@ -41,7 +41,29 @@ var (
 	enableDebug                  bool
 	problemsFromSBOM             bool
 	trivyServerEndpoint          string
+	config                       mq.Config
 )
+
+func mqWriteObject(data []byte) error {
+	messageQ, err := mq.New(config)
+	if err != nil {
+		return err
+	}
+	defer messageQ.Close()
+
+	producer, err := messageQ.SyncProducer("lagoon-handler")
+	if err != nil {
+		return err
+	}
+
+	err = producer.Produce(data)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 
 func main() {
 	flag.StringVar(&lagoonAppID, "lagoon-app-id", "insights-handler", "The appID to use that will be sent with messages.")
@@ -161,7 +183,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	config := mq.Config{
+	config = mq.Config{
 		ReconnectDelay: time.Duration(rabbitReconnectRetryInterval) * time.Second,
 		Exchanges: mq.Exchanges{
 			{
@@ -200,9 +222,20 @@ func main() {
 				},
 			},
 		},
+		Producers: mq.Producers{
+			{
+				Name:     "lagoon-handler",
+				Exchange: "lagoon-insights",
+				Sync:     true,
+				Options: mq.Options{
+					"delivery_mode": "2",
+					"headers":       "",
+					"content_type":  "",
+				},
+			},
+		},
 		DSN: fmt.Sprintf("amqp://%s:%s@%s/", broker.Username, broker.Password, broker.Hostname),
 	}
-
 	messaging := handler.NewMessaging(config,
 		graphQLConfig,
 		s3Config,
@@ -211,6 +244,7 @@ func main() {
 		enableDebug,
 		problemsFromSBOM,
 		trivyServerEndpoint,
+		mqWriteObject,
 	)
 
 	// start the consumer
