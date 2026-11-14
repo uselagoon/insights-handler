@@ -5,7 +5,7 @@ go 1.26.3
 require (
 	github.com/Khan/genqlient v0.8.1
 	github.com/cheshir/go-mq v1.2.0
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/joho/godotenv v1.5.1
 	github.com/matryer/try v0.0.0-20161228173917-9ac251b645a2
 	github.com/stretchr/testify v1.11.1
